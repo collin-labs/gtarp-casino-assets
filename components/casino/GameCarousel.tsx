@@ -1,108 +1,142 @@
 "use client";
 
-import { useState } from "react";
-import { GAMES } from "@/lib/games";
+import { useRef, useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { GAMES, type Game } from "@/lib/games";
 import GameCard from "./GameCard";
-
-const CARDS_PER_PAGE = 8;
 
 interface Props {
   lang: "br" | "in";
+  onGameSelect?: (game: Game) => void;
 }
 
-export default function GameCarousel({ lang }: Props) {
-  const [page, setPage] = useState(0);
+export default function GameCarousel({ lang, onGameSelect }: Props) {
   const isBR = lang === "br";
-  const totalPages = Math.ceil(GAMES.length / CARDS_PER_PAGE);
-  const visibleGames = GAMES.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 5);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 5);
+    setScrollProgress(
+      el.scrollWidth > el.clientWidth
+        ? el.scrollLeft / (el.scrollWidth - el.clientWidth)
+        : 0
+    );
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, []);
 
   return (
     <div
       className="relative z-[5] flex flex-col h-full"
       style={{
-        padding: "clamp(4px, 0.8vw, 12px) clamp(8px, 2vw, 30px) clamp(20px, 3vw, 45px)",
-        gap: "clamp(2px, 0.5vw, 8px)",
+        padding:
+          "clamp(6px, 1vw, 14px) 0 clamp(20px, 3vw, 45px)",
+        gap: "clamp(4px, 0.6vw, 10px)",
       }}
     >
-      {/* Título + Setas */}
-      <div className="flex justify-between items-center">
-        <span
-          className="font-bold tracking-[2px]"
-          style={{
-            fontSize: "clamp(8px, 0.9vw, 13px)",
-            color: "#D4A843",
-            fontFamily: "var(--font-cinzel)",
-          }}
-        >
-          {isBR ? "TODOS OS JOGOS" : "ALL GAMES"}
-        </span>
-        <div className="flex gap-1.5">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="flex items-center justify-center rounded-md text-xs font-bold p-0 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
+      {/* Fade edges para indicar scroll */}
+      <div
+        className="pointer-events-none absolute left-0 top-0 bottom-0 z-[8]"
+        style={{
+          width: "clamp(20px, 3vw, 50px)",
+          background:
+            "linear-gradient(90deg, rgba(10,10,10,0.9) 0%, transparent 100%)",
+          opacity: canScrollLeft ? 1 : 0,
+          transition: "opacity 0.3s",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute right-0 top-0 bottom-0 z-[8]"
+        style={{
+          width: "clamp(20px, 3vw, 50px)",
+          background:
+            "linear-gradient(270deg, rgba(10,10,10,0.9) 0%, transparent 100%)",
+          opacity: canScrollRight ? 1 : 0,
+          transition: "opacity 0.3s",
+        }}
+      />
+
+      {/* Scroll container horizontal */}
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 flex items-center overflow-x-auto overflow-y-hidden"
+        style={{
+          scrollSnapType: "x mandatory",
+          scrollBehavior: "smooth",
+          WebkitOverflowScrolling: "touch",
+          padding: "0 clamp(12px, 2.5vw, 40px)",
+          gap: "clamp(6px, 0.8vw, 14px)",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+      >
+        {GAMES.map((game, i) => (
+          <motion.div
+            key={game.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.03 }}
             style={{
-              width: "24px",
-              height: "24px",
-              background: "rgba(212,168,67,0.15)",
-              border: "1px solid rgba(212,168,67,0.3)",
-              color: page === 0 ? "rgba(212,168,67,0.2)" : "#FFD700",
+              flex: "0 0 auto",
+              width: "clamp(80px, 10vw, 160px)",
+              scrollSnapAlign: "start",
             }}
           >
-            ◀
-          </button>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="flex items-center justify-center rounded-md text-xs font-bold p-0 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
-            style={{
-              width: "24px",
-              height: "24px",
-              background: "rgba(212,168,67,0.15)",
-              border: "1px solid rgba(212,168,67,0.3)",
-              color: page >= totalPages - 1 ? "rgba(212,168,67,0.2)" : "#FFD700",
-            }}
-          >
-            ▶
-          </button>
-        </div>
+            <GameCard
+              game={game}
+              isBR={isBR}
+              onClick={() => onGameSelect?.(game)}
+            />
+          </motion.div>
+        ))}
       </div>
 
-      {/* Cards Grid — 8 cards, quadrados */}
+      {/* Barra de progresso estilo cyber */}
       <div
-        className="flex-1 min-h-0 flex items-center"
-        style={{ width: "100%" }}
+        className="flex justify-center"
+        style={{ padding: "0 clamp(12px, 2.5vw, 40px)" }}
       >
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${CARDS_PER_PAGE}, 1fr)`,
-            gap: "clamp(3px, 0.6vw, 10px)",
-            width: "100%",
+            width: "clamp(100px, 20vw, 300px)",
+            height: "3px",
+            borderRadius: "2px",
+            background: "rgba(212,168,67,0.15)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
-        {visibleGames.map((game) => (
-          <GameCard key={game.id} game={game} isBR={isBR} />
-        ))}
-        </div>
-      </div>
-
-      {/* Page dots */}
-      <div className="flex justify-center gap-1">
-        {Array.from({ length: totalPages }, (_, i) => (
-          <button
-            key={i}
-            onClick={() => setPage(i)}
-            className="p-0 rounded-full cursor-pointer transition-all duration-300"
+          <motion.div
+            animate={{ left: `${scrollProgress * 70}%` }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             style={{
-              width: "6px",
-              height: "6px",
-              background: i === page ? "#FFD700" : "rgba(212,168,67,0.3)",
-              border: "none",
-              boxShadow: i === page ? "0 0 4px rgba(255,215,0,0.5)" : "none",
+              position: "absolute",
+              top: 0,
+              width: "30%",
+              height: "100%",
+              borderRadius: "2px",
+              background:
+                "linear-gradient(90deg, transparent, #00E676, #FFD700, transparent)",
+              boxShadow: "0 0 8px rgba(0,230,118,0.4)",
             }}
           />
-        ))}
+        </div>
       </div>
     </div>
   );
