@@ -28,8 +28,25 @@ export default function Header({ lang }: HeaderProps) {
         />
       </motion.div>
 
-      {/* Centro vazio -- letreiro esta na divider */}
-      <div />
+      {/* Centro -- label "GRANDE JACKPOT" */}
+      <div className="flex items-center justify-center h-full">
+        <motion.span
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          style={{
+            fontFamily: "var(--font-cinzel)",
+            fontSize: "clamp(9px, 1.1vw, 16px)",
+            fontWeight: 800,
+            color: "#FFD700",
+            textShadow:
+              "0 0 10px rgba(255,215,0,0.5), 0 0 25px rgba(255,215,0,0.2)",
+            letterSpacing: "3px",
+          }}
+        >
+          GRANDE JACKPOT
+        </motion.span>
+      </div>
 
       {/* Saldo -- premium styling com hover */}
       <motion.div
