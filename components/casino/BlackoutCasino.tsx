@@ -86,6 +86,17 @@ export default function BlackoutCasino() {
               position: "relative",
             }}
           >
+            {/* Mask the bottom border center where dock sits */}
+            <div
+              className="absolute bottom-[-2px] left-1/2 -translate-x-1/2 z-[6] pointer-events-none"
+              style={{
+                width: "40%",
+                height: "6px",
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.78) 15%, rgba(0,0,0,0.78) 85%, transparent 100%)",
+              }}
+            />
+
             {/* Escurecimento leve sobre o fundo */}
             <div
               className="absolute inset-0 pointer-events-none rounded-[15px]"
@@ -182,14 +193,14 @@ export default function BlackoutCasino() {
             {/* HERO */}
             <HeroCarousel lang={lang} />
 
-            {/* Divisoria 2 */}
+            {/* Divisoria 2 -- degrade que apaga no centro onde o menu toca */}
             <div
               className="z-[5]"
               style={{
                 height: "1px",
                 background:
-                  "linear-gradient(90deg, transparent 5%, #D4A843 30%, #FFD700 50%, #D4A843 70%, transparent 95%)",
-                opacity: 0.5,
+                  "linear-gradient(90deg, transparent 5%, #D4A843 15%, #FFD700 25%, #D4A843 32%, transparent 38%, transparent 62%, #D4A843 68%, #FFD700 75%, #D4A843 85%, transparent 95%)",
+                opacity: 0.6,
               }}
             />
 
@@ -250,13 +261,13 @@ export default function BlackoutCasino() {
             </div>
           </motion.div>
 
-          {/* DOCK -- posicionado NA borda inferior */}
+          {/* DOCK -- posicionado NA borda inferior, subido para ficar no meio */}
           <div
             style={{
               position: "absolute",
               bottom: 0,
               left: "50%",
-              transform: "translate(-50%, 45%)",
+              transform: "translate(-50%, 42%)",
               width: "60%",
               zIndex: 20,
               pointerEvents: "auto",

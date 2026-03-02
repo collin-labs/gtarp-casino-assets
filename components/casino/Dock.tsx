@@ -36,7 +36,7 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
           top: "50%",
           left: "8%",
           right: "8%",
-          transform: "translateY(-30%)",
+          transform: "translateY(-20%)",
           display: "grid",
           gridTemplateColumns: "repeat(5, 1fr)",
           alignItems: "center",
@@ -61,6 +61,7 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
               letterSpacing: "2px",
               position: "relative",
               transition: "color 0.3s, text-shadow 0.3s",
+              paddingTop: "6px",
             }}
             onMouseEnter={(e) => {
               if (i !== activeTab) {
@@ -78,25 +79,25 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
             }}
             title={tab}
           >
-            {tab}
-            {/* Barra de destaque inferior animada */}
+            {/* Barra de destaque SUPERIOR animada */}
             {i === activeTab && (
               <motion.div
                 layoutId="dock-active-bar"
                 style={{
                   position: "absolute",
-                  bottom: "-4px",
-                  left: "20%",
-                  right: "20%",
-                  height: "2px",
+                  top: "-2px",
+                  left: "15%",
+                  right: "15%",
+                  height: "3px",
                   background:
                     "linear-gradient(90deg, transparent, #00E676, transparent)",
-                  boxShadow: "0 0 8px rgba(0,230,118,0.5)",
-                  borderRadius: "2px",
+                  boxShadow: "0 0 10px rgba(0,230,118,0.6), 0 2px 8px rgba(0,230,118,0.3)",
+                  borderRadius: "0 0 2px 2px",
                 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             )}
+            {tab}
           </motion.button>
         ))}
       </div>

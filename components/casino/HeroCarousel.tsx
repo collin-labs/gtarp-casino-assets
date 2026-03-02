@@ -96,7 +96,7 @@ export default function HeroCarousel({ lang }: HeroProps) {
             {isBR ? current.descBR : current.descEN}
           </motion.p>
 
-          {/* Botao JOGAR AGORA */}
+          {/* Botao JOGAR AGORA -- PNG original, menor */}
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -109,9 +109,9 @@ export default function HeroCarousel({ lang }: HeroProps) {
             className="relative border-none cursor-pointer flex items-center justify-center p-0"
             style={{
               background: "none",
-              width: "clamp(100px, 18vw, 280px)",
+              width: "clamp(80px, 13vw, 200px)",
               aspectRatio: "829 / 234",
-              backgroundImage: `url(${btnPressed ? UI.btnDisabled : UI.btnActive})`,
+              backgroundImage: `url(${btnPressed ? UI.btnActive : UI.btnDisabled})`,
               backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center",
@@ -121,11 +121,11 @@ export default function HeroCarousel({ lang }: HeroProps) {
               className="pointer-events-none"
               style={{
                 fontFamily: "var(--font-cinzel)",
-                fontSize: "clamp(8px, 1.2vw, 18px)",
+                fontSize: "clamp(6px, 0.85vw, 13px)",
                 fontWeight: 900,
-                color: "#FFFFFF",
+                color: "#FFD700",
                 textShadow:
-                  "0 0 8px rgba(0,230,118,0.6), 0 2px 4px rgba(0,0,0,0.8)",
+                  "0 0 8px rgba(255,215,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
                 letterSpacing: "2px",
               }}
             >
@@ -157,9 +157,9 @@ export default function HeroCarousel({ lang }: HeroProps) {
         </motion.div>
       </AnimatePresence>
 
-      {/* LADO DIREITO: Imagem Dourada */}
+      {/* LADO DIREITO: Imagem com Pedestal */}
       <div
-        className="flex items-center justify-center relative"
+        className="flex items-end justify-center relative overflow-hidden"
         style={{ gridColumn: 2 }}
       >
         <AnimatePresence mode="wait">
@@ -169,19 +169,20 @@ export default function HeroCarousel({ lang }: HeroProps) {
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, scale: 0.85, rotate: 3 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="flex items-center justify-center relative w-full h-full"
+            className="flex items-end justify-center relative w-full h-full"
           >
             {/* Glow atras */}
             <div
               className="absolute w-[60%] h-[60%] rounded-full animate-breathe"
               style={{
+                top: "20%",
                 background:
                   "radial-gradient(circle, rgba(0,230,118,0.15) 0%, rgba(212,168,67,0.08) 50%, transparent 70%)",
                 filter: "blur(30px)",
               }}
             />
             <motion.img
-              src={current.goldUrl}
+              src={current.pedestalUrl}
               alt={isBR ? current.labelBR : current.labelEN}
               animate={{
                 y: [0, -6, 0],
@@ -191,10 +192,10 @@ export default function HeroCarousel({ lang }: HeroProps) {
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="relative z-[2] object-contain"
+              className="relative z-[2] object-contain object-bottom"
               style={{
-                maxHeight: "88%",
-                maxWidth: "85%",
+                maxHeight: "105%",
+                maxWidth: "95%",
                 filter:
                   "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
               }}
