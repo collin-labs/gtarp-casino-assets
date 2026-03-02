@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { UI } from "@/lib/assets";
 import { TABS } from "@/lib/games";
 
@@ -13,10 +14,6 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
   const isBR = lang === "br";
   const tabs = isBR ? TABS.br : TABS.en;
 
-  // Ícones para cada tab
-  const icons = ["♦", "⚔", "■", "★", "●"];
-  const iconStyle = { marginRight: "6px", fontSize: "0.75em", verticalAlign: "middle" };
-
   return (
     <div style={{ position: "relative", width: "100%" }}>
       {/* Menu ornamentado PNG MODELO2 */}
@@ -28,11 +25,11 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
           height: "auto",
           display: "block",
           pointerEvents: "none",
-          filter: "drop-shadow(0 0 15px rgba(212,168,67,0.3))",
+          filter: "drop-shadow(0 0 20px rgba(212,168,67,0.35))",
         }}
       />
 
-      {/* 5 tabs sobrepostos no PNG — posição central do body */}
+      {/* 5 tabs sobrepostos no PNG */}
       <div
         style={{
           position: "absolute",
@@ -46,13 +43,15 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
         }}
       >
         {tabs.map((tab, i) => (
-          <button
+          <motion.button
             key={i}
             onClick={() => setActiveTab(i)}
-            className="bg-transparent border-none cursor-pointer text-center p-0 transition-all duration-300"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-transparent border-none cursor-pointer text-center p-0"
             style={{
               fontFamily: "var(--font-cinzel)",
-              fontSize: "clamp(11px, 1.4vw, 20px)",
+              fontSize: "clamp(9px, 1.1vw, 16px)",
               fontWeight: 900,
               color: i === activeTab ? "#00E676" : "#D4A843",
               textShadow:
@@ -60,24 +59,45 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
                   ? "0 0 12px rgba(0,230,118,0.7), 0 0 25px rgba(0,230,118,0.35)"
                   : "0 0 4px rgba(212,168,67,0.3)",
               letterSpacing: "2px",
+              position: "relative",
+              transition: "color 0.3s, text-shadow 0.3s",
             }}
             onMouseEnter={(e) => {
               if (i !== activeTab) {
-                (e.currentTarget as HTMLButtonElement).style.color = "#FFD700";
-                (e.currentTarget as HTMLButtonElement).style.textShadow = "0 0 10px rgba(255,215,0,0.5)";
+                e.currentTarget.style.color = "#FFD700";
+                e.currentTarget.style.textShadow =
+                  "0 0 10px rgba(255,215,0,0.5), 0 0 20px rgba(255,215,0,0.25)";
               }
             }}
             onMouseLeave={(e) => {
               if (i !== activeTab) {
-                (e.currentTarget as HTMLButtonElement).style.color = "#D4A843";
-                (e.currentTarget as HTMLButtonElement).style.textShadow = "0 0 4px rgba(212,168,67,0.3)";
+                e.currentTarget.style.color = "#D4A843";
+                e.currentTarget.style.textShadow =
+                  "0 0 4px rgba(212,168,67,0.3)";
               }
             }}
             title={tab}
           >
-            <span style={iconStyle}>{icons[i]}</span>
             {tab}
-          </button>
+            {/* Barra de destaque inferior animada */}
+            {i === activeTab && (
+              <motion.div
+                layoutId="dock-active-bar"
+                style={{
+                  position: "absolute",
+                  bottom: "-4px",
+                  left: "20%",
+                  right: "20%",
+                  height: "2px",
+                  background:
+                    "linear-gradient(90deg, transparent, #00E676, transparent)",
+                  boxShadow: "0 0 8px rgba(0,230,118,0.5)",
+                  borderRadius: "2px",
+                }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
+          </motion.button>
         ))}
       </div>
     </div>

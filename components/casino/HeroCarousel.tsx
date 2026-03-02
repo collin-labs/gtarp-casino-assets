@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HERO_GAMES, type Game } from "@/lib/games";
+import { motion, AnimatePresence } from "framer-motion";
+import { HERO_GAMES } from "@/lib/games";
 import { UI } from "@/lib/assets";
 
 interface HeroProps {
@@ -10,150 +11,196 @@ interface HeroProps {
 
 export default function HeroCarousel({ lang }: HeroProps) {
   const [heroIdx, setHeroIdx] = useState(0);
-  const [fade, setFade] = useState(true);
   const [btnPressed, setBtnPressed] = useState(false);
+  const [direction, setDirection] = useState(1);
   const isBR = lang === "br";
   const current = HERO_GAMES[heroIdx];
 
   // Auto-rotation 6s
   useEffect(() => {
     const timer = setInterval(() => {
-      setFade(false);
-      setTimeout(() => {
-        setHeroIdx((prev) => (prev + 1) % HERO_GAMES.length);
-        setFade(true);
-      }, 300);
+      setDirection(1);
+      setHeroIdx((prev) => (prev + 1) % HERO_GAMES.length);
     }, 6000);
     return () => clearInterval(timer);
   }, []);
 
   const goTo = (i: number) => {
     if (i === heroIdx) return;
-    setFade(false);
-    setTimeout(() => {
-      setHeroIdx(i);
-      setFade(true);
-    }, 200);
+    setDirection(i > heroIdx ? 1 : -1);
+    setHeroIdx(i);
+  };
+
+  const slideVariants = {
+    enter: (d: number) => ({
+      opacity: 0,
+      x: d > 0 ? 60 : -60,
+    }),
+    center: {
+      opacity: 1,
+      x: 0,
+    },
+    exit: (d: number) => ({
+      opacity: 0,
+      x: d > 0 ? -60 : 60,
+    }),
   };
 
   return (
     <div
-      className="relative z-[5] grid grid-cols-[42%_58%] overflow-hidden h-full transition-opacity duration-300"
-      style={{ opacity: fade ? 1 : 0 }}
+      className="relative z-[5] grid grid-cols-[42%_58%] overflow-hidden h-full"
     >
-      {/* ── LADO ESQUERDO: Logo + Subtítulo + Botão ── */}
-      <div
-        className="flex flex-col justify-center items-start gap-[clamp(4px,0.8vw,12px)] overflow-hidden"
-        style={{
-          padding: "clamp(8px, 1.5vw, 20px) clamp(12px, 2.5vw, 40px)",
-          animation: fade ? "fadeInUp 0.5s ease forwards" : "none",
-        }}
-      >
-        {/* Logo do jogo (BR/IN) */}
-        <img
-          src={isBR ? current.logoBR : current.logoIN}
-          alt={isBR ? current.labelBR : current.labelEN}
-          className="object-contain drop-shadow-[0_0_16px_rgba(212,168,67,0.5)]"
-          style={{ width: "clamp(100px, 20vw, 340px)", maxHeight: "40%", height: "auto" }}
-        />
-
-        {/* Subtítulo */}
-        <p
-          className="m-0 leading-relaxed max-w-[90%]"
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={`hero-left-${heroIdx}`}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col justify-center items-start gap-[clamp(4px,0.8vw,12px)] overflow-hidden absolute inset-0"
           style={{
-            fontFamily: "var(--font-cinzel)",
-            fontSize: "clamp(8px, 1vw, 14px)",
-            color: "rgba(255,215,0,0.7)",
+            padding: "clamp(8px, 1.5vw, 20px) clamp(12px, 2.5vw, 40px)",
+            width: "42%",
           }}
         >
-          {isBR ? current.descBR : current.descEN}
-        </p>
+          {/* Logo do jogo */}
+          <motion.img
+            src={isBR ? current.logoBR : current.logoIN}
+            alt={isBR ? current.labelBR : current.labelEN}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="object-contain"
+            style={{
+              width: "clamp(100px, 20vw, 340px)",
+              maxHeight: "40%",
+              height: "auto",
+              filter: "drop-shadow(0 0 16px rgba(212,168,67,0.5))",
+            }}
+          />
 
-        {/* Botão JOGAR AGORA */}
-        <button
-          onMouseDown={() => setBtnPressed(true)}
-          onMouseUp={() => setBtnPressed(false)}
-          onMouseLeave={() => setBtnPressed(false)}
-          className="relative border-none cursor-pointer flex items-center justify-center p-0 group"
-          style={{
-            background: "none",
-            width: "clamp(100px, 18vw, 280px)",
-            aspectRatio: "829 / 234",
-            backgroundImage: `url(${btnPressed ? UI.btnDisabled : UI.btnActive})`,
-            backgroundSize: "contain",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center",
-            transition: "transform 0.1s, filter 0.1s",
-            transform: btnPressed ? "scale(0.97)" : "scale(1)",
-            filter: btnPressed ? "brightness(0.9)" : "brightness(1)",
-          }}
-          onMouseEnter={(e) => {
-            if (!btnPressed) {
-              (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.12)";
-              (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.03)";
-            }
-          }}
-        >
-          <span
-            className="pointer-events-none"
+          {/* Subtitulo */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="m-0 leading-relaxed max-w-[90%]"
             style={{
               fontFamily: "var(--font-cinzel)",
-              fontSize: "clamp(8px, 1.2vw, 18px)",
-              fontWeight: 900,
-              color: "#FFFFFF",
-              textShadow: "0 0 8px rgba(0,230,118,0.6), 0 2px 4px rgba(0,0,0,0.8)",
-              letterSpacing: "2px",
+              fontSize: "clamp(8px, 1vw, 14px)",
+              color: "rgba(255,215,0,0.7)",
             }}
           >
-            {isBR ? "JOGAR AGORA" : "PLAY NOW"}
-          </span>
-        </button>
+            {isBR ? current.descBR : current.descEN}
+          </motion.p>
 
-        {/* Hero dots */}
-        <div className="flex gap-1.5 mt-[2px]">
-          {HERO_GAMES.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className="p-0 cursor-pointer rounded-full transition-all duration-300"
+          {/* Botao JOGAR AGORA */}
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            whileHover={{ scale: 1.05, filter: "brightness(1.15)" }}
+            whileTap={{ scale: 0.97 }}
+            onMouseDown={() => setBtnPressed(true)}
+            onMouseUp={() => setBtnPressed(false)}
+            onMouseLeave={() => setBtnPressed(false)}
+            className="relative border-none cursor-pointer flex items-center justify-center p-0"
+            style={{
+              background: "none",
+              width: "clamp(100px, 18vw, 280px)",
+              aspectRatio: "829 / 234",
+              backgroundImage: `url(${btnPressed ? UI.btnDisabled : UI.btnActive})`,
+              backgroundSize: "contain",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+            }}
+          >
+            <span
+              className="pointer-events-none"
               style={{
-                width: "8px",
-                height: "8px",
-                border: "1px solid #D4A843",
-                background: i === heroIdx ? "#FFD700" : "rgba(212,168,67,0.2)",
-                animation: i === heroIdx ? "dotPulse 2s ease-in-out infinite" : "none",
-                boxShadow: i === heroIdx ? "0 0 6px rgba(255,215,0,0.6)" : "none",
+                fontFamily: "var(--font-cinzel)",
+                fontSize: "clamp(8px, 1.2vw, 18px)",
+                fontWeight: 900,
+                color: "#FFFFFF",
+                textShadow:
+                  "0 0 8px rgba(0,230,118,0.6), 0 2px 4px rgba(0,0,0,0.8)",
+                letterSpacing: "2px",
               }}
-            />
-          ))}
-        </div>
-      </div>
+            >
+              {isBR ? "JOGAR AGORA" : "PLAY NOW"}
+            </span>
+          </motion.button>
 
-      {/* ── LADO DIREITO: Imagem Dourada 3D ── */}
+          {/* Hero dots */}
+          <div className="flex gap-1.5 mt-[2px]">
+            {HERO_GAMES.map((_, i) => (
+              <motion.button
+                key={i}
+                onClick={() => goTo(i)}
+                whileHover={{ scale: 1.3 }}
+                className="p-0 cursor-pointer rounded-full"
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  border: "1px solid #D4A843",
+                  background:
+                    i === heroIdx ? "#FFD700" : "rgba(212,168,67,0.2)",
+                  boxShadow:
+                    i === heroIdx ? "0 0 8px rgba(255,215,0,0.6)" : "none",
+                  transition: "all 0.3s",
+                }}
+              />
+            ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* LADO DIREITO: Imagem Dourada */}
       <div
         className="flex items-center justify-center relative"
-        style={{ animation: fade ? "scaleIn 0.6s ease forwards" : "none" }}
+        style={{ gridColumn: 2 }}
       >
-        {/* Glow atrás */}
-        <div
-          className="absolute w-[60%] h-[60%] rounded-full animate-breathe"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(0,230,118,0.15) 0%, rgba(212,168,67,0.08) 50%, transparent 70%)",
-            filter: "blur(30px)",
-          }}
-        />
-        <img
-          src={current.goldUrl}
-          alt={isBR ? current.labelBR : current.labelEN}
-          className="relative z-[2] object-contain animate-float"
-          style={{
-            maxHeight: "88%",
-            maxWidth: "85%",
-            filter:
-              "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
-          }}
-        />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`hero-right-${heroIdx}`}
+            initial={{ opacity: 0, scale: 0.85, rotate: -3 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 0.85, rotate: 3 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex items-center justify-center relative w-full h-full"
+          >
+            {/* Glow atras */}
+            <div
+              className="absolute w-[60%] h-[60%] rounded-full animate-breathe"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(0,230,118,0.15) 0%, rgba(212,168,67,0.08) 50%, transparent 70%)",
+                filter: "blur(30px)",
+              }}
+            />
+            <motion.img
+              src={current.goldUrl}
+              alt={isBR ? current.labelBR : current.labelEN}
+              animate={{
+                y: [0, -6, 0],
+              }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="relative z-[2] object-contain"
+              style={{
+                maxHeight: "88%",
+                maxWidth: "85%",
+                filter:
+                  "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
