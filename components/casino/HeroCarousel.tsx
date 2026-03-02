@@ -48,7 +48,8 @@ export default function HeroCarousel({ lang }: HeroProps) {
 
   return (
     <div
-      className="relative z-[5] grid grid-cols-[42%_58%] overflow-hidden h-full"
+      className="relative z-[5] grid grid-cols-[42%_58%] h-full"
+      style={{ overflow: "visible" }}
     >
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
@@ -159,8 +160,8 @@ export default function HeroCarousel({ lang }: HeroProps) {
 
       {/* LADO DIREITO: Imagem com Pedestal */}
       <div
-        className="flex items-end justify-center relative overflow-hidden"
-        style={{ gridColumn: 2 }}
+        className="flex items-end justify-center relative"
+        style={{ gridColumn: 2, overflow: "visible" }}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -184,6 +185,13 @@ export default function HeroCarousel({ lang }: HeroProps) {
             <motion.img
               src={current.pedestalUrl}
               alt={isBR ? current.labelBR : current.labelEN}
+              onError={(e) => {
+                console.log("[v0] Pedestal image failed to load:", current.pedestalUrl);
+                console.log("[v0] Current game:", current.cardName, "id:", current.id);
+              }}
+              onLoad={() => {
+                console.log("[v0] Pedestal image loaded OK:", current.pedestalUrl);
+              }}
               animate={{
                 y: [0, -6, 0],
               }}
@@ -194,8 +202,8 @@ export default function HeroCarousel({ lang }: HeroProps) {
               }}
               className="relative z-[2] object-contain object-bottom"
               style={{
-                maxHeight: "105%",
-                maxWidth: "95%",
+                maxHeight: "115%",
+                maxWidth: "100%",
                 filter:
                   "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
               }}
