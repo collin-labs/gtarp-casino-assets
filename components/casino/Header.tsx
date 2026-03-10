@@ -28,45 +28,33 @@ export default function Header({ lang }: HeaderProps) {
         />
       </motion.div>
 
-      {/* Centro -- label "GRANDE JACKPOT" */}
-      <div className="flex items-center justify-center h-full">
-        <motion.span
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-          style={{
-            fontFamily: "var(--font-cinzel)",
-            fontSize: "clamp(9px, 1.1vw, 16px)",
-            fontWeight: 800,
-            color: "#FFD700",
-            textShadow:
-              "0 0 10px rgba(255,215,0,0.5), 0 0 25px rgba(255,215,0,0.2)",
-            letterSpacing: "3px",
-          }}
-        >
-          GRANDE JACKPOT
-        </motion.span>
-      </div>
+      {/* Centro -- vazio, mantém grid */}
+      <div />
 
-      {/* Saldo -- premium styling com hover */}
+      {/* Saldo GCoin */}
       <motion.div
-        className="flex flex-col items-end justify-center h-full"
+        className="flex flex-col items-end justify-start h-full"
+        style={{paddingTop: "8px" }}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
+        style={{ marginTop: "45px" }}
       >
         <motion.div
           whileHover={{
             boxShadow:
-              "0 0 20px rgba(212,168,67,0.4), inset 0 1px 0 rgba(255,215,0,0.15), inset 0 0 10px rgba(0,0,0,0.4)",
-            borderColor: "rgba(255,215,0,0.8)",
+              "0 0 25px rgba(0,230,118,0.3), 0 0 15px rgba(212,168,67,0.4), inset 0 0 10px rgba(0,0,0,0.4)",
+            borderColor: "rgba(0,230,118,0.8)",
           }}
           style={{
             background:
-              "linear-gradient(135deg, rgba(20,18,8,0.95), rgba(10,8,3,0.98))",
+              "linear-gradient(135deg, rgba(10,18,8,0.95), rgba(5,12,3,0.98))",
             border: "1.5px solid rgba(212,168,67,0.6)",
-            borderRadius: "10px",
-            padding: "5px 14px",
+            borderRadius: "12px",
+            padding: "6px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
             boxShadow:
               "0 0 15px rgba(212,168,67,0.2), inset 0 1px 0 rgba(255,215,0,0.1), inset 0 0 10px rgba(0,0,0,0.4)",
             cursor: "default",
@@ -75,15 +63,35 @@ export default function Header({ lang }: HeaderProps) {
         >
           <span
             style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "clamp(10px, 1.1vw, 16px)",
-              color: "#FFD700",
-              fontWeight: 700,
-              textShadow: "0 0 10px rgba(255,215,0,0.5)",
-              letterSpacing: "1px",
+              fontSize: "clamp(12px, 1.3vw, 18px)",
+              filter: "drop-shadow(0 0 4px rgba(0,230,118,0.5))",
             }}
           >
-            R$ 509,25
+            🪙
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "clamp(11px, 1.2vw, 17px)",
+              color: "#00E676",
+              fontWeight: 700,
+              textShadow: "0 0 10px rgba(0,230,118,0.5), 0 0 20px rgba(0,230,118,0.2)",
+              letterSpacing: "1.5px",
+            }}
+          >
+            509
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-cinzel)",
+              fontSize: "clamp(7px, 0.7vw, 10px)",
+              color: "rgba(212,168,67,0.7)",
+              fontWeight: 600,
+              letterSpacing: "2px",
+              marginLeft: "-4px",
+            }}
+          >
+            GC
           </span>
         </motion.div>
       </motion.div>

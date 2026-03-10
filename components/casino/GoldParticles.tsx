@@ -40,11 +40,16 @@ function createParticle(w: number, h: number): Particle {
   };
 }
 
-export default function GoldParticles({ width, height }: { width: number; height: number }) {
+export default function GoldParticles({ width, height, mouseX, mouseY }: { width: number; height: number; mouseX: number; mouseY: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles = useRef<Particle[]>([]);
   const raf = useRef<number>(0);
   const time = useRef(0);
+  const mouseRef = useRef({ x: -9999, y: -9999 });
+
+  // Atualizar ref do mouse sem re-render
+  mouseRef.current.x = mouseX;
+  mouseRef.current.y = mouseY;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -72,6 +77,25 @@ export default function GoldParticles({ width, height }: { width: number; height
       p.y += p.vy;
       p.life += 1;
       p.angle += p.rotSpeed;
+
+      // ── FASE 7: Repulsão do mouse (segura com clamp) ──
+      const mx = mouseRef.current.x;
+      const my = mouseRef.current.y;
+      if (mx > 0 && my > 0) {
+        const dx = p.x - mx;
+        const dy = p.y - my;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const repulsionRadius = 90;
+        if (dist < repulsionRadius && dist > 0.1) {
+          // Força suave inversamente proporcional à distância
+          const force = ((repulsionRadius - dist) / repulsionRadius) * 1.8;
+          p.x += (dx / dist) * force;
+          p.y += (dy / dist) * force;
+          // CLAMP obrigatório — anti-padrão #7
+          p.x = Math.max(-5, Math.min(width + 5, p.x));
+          p.y = Math.max(-5, Math.min(height + 5, p.y));
+        }
+      }
 
       // Fade in/out baseado em ciclo de vida
       const lifeRatio = p.life / p.maxLife;
@@ -168,7 +192,7 @@ export default function GoldParticles({ width, height }: { width: number; height
     canvas.height = height;
 
     // Criar particulas variadas (mais que antes)
-    particles.current = Array.from({ length: 70 }, () => createParticle(width, height));
+    particles.current = Array.from({ length: 130 }, () => createParticle(width, height));
 
     draw();
     return () => cancelAnimationFrame(raf.current);

@@ -2,28 +2,35 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { HERO_GAMES } from "@/lib/games";
+import type { Game } from "@/lib/games";
 import { UI } from "@/lib/assets";
 
 interface HeroProps {
   lang: "br" | "in";
+  games: Game[];
+  onGameSelect?: (game: Game) => void;
+  activeTab?: number;
 }
 
-export default function HeroCarousel({ lang }: HeroProps) {
+export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: HeroProps) {
   const [heroIdx, setHeroIdx] = useState(0);
   const [btnPressed, setBtnPressed] = useState(false);
   const [direction, setDirection] = useState(1);
   const isBR = lang === "br";
-  const current = HERO_GAMES[heroIdx];
+  const current = games[heroIdx];
 
-  // Auto-rotation 6s
   useEffect(() => {
+    setHeroIdx(0);
+  }, [games]);
+
+  useEffect(() => {
+    if (games.length <= 1) return;
     const timer = setInterval(() => {
       setDirection(1);
-      setHeroIdx((prev) => (prev + 1) % HERO_GAMES.length);
+      setHeroIdx((prev) => (prev + 1) % games.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [games.length]);
 
   const goTo = (i: number) => {
     if (i === heroIdx) return;
@@ -32,24 +39,24 @@ export default function HeroCarousel({ lang }: HeroProps) {
   };
 
   const slideVariants = {
-    enter: (d: number) => ({
-      opacity: 0,
-      x: d > 0 ? 60 : -60,
-    }),
-    center: {
-      opacity: 1,
-      x: 0,
-    },
-    exit: (d: number) => ({
-      opacity: 0,
-      x: d > 0 ? -60 : 60,
-    }),
+    enter: (d: number) => ({ opacity: 0, x: d > 0 ? 60 : -60 }),
+    center: { opacity: 1, x: 0 },
+    exit: (d: number) => ({ opacity: 0, x: d > 0 ? -60 : 60 }),
   };
 
   return (
     <div
-      className="relative z-[5] grid grid-cols-[42%_58%] overflow-hidden h-full"
+      style={{
+        position: "relative", 
+        zIndex: 5,
+        width: "100%",
+        height: "100%",
+        overflow: "clip",
+      }}
     >
+      {/* ========================================== */}
+      {/* LADO ESQUERDO — Logo + Subtitle + Button   */}
+      {/* ========================================== */}
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={`hero-left-${heroIdx}`}
@@ -59,10 +66,18 @@ export default function HeroCarousel({ lang }: HeroProps) {
           animate="center"
           exit="exit"
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col justify-center items-start gap-[clamp(4px,0.8vw,12px)] overflow-hidden absolute inset-0"
           style={{
-            padding: "clamp(8px, 1.5vw, 20px) clamp(12px, 2.5vw, 40px)",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
             width: "42%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+            gap: "clamp(1px, 0.3vw, 4px)",
+            zIndex: 2,
           }}
         >
           {/* Logo do jogo */}
@@ -72,76 +87,127 @@ export default function HeroCarousel({ lang }: HeroProps) {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="object-contain"
+            draggable={false}
             style={{
-              width: "clamp(100px, 20vw, 340px)",
-              maxHeight: "40%",
+              width: "clamp(140px, 25vw, 400px)",
+              maxHeight: "85%",
+              marginTop: activeTab === 1 ? "clamp(28px, 1vw, 16px)" : 0,
+              marginBottom: activeTab === 0 
+                ? "clamp(-35px, -3.5vw, -10px)" 
+                : activeTab === 1 
+                  ? "clamp(-15px, -1.5vw, -4px)" 
+                  : 0,
               height: "auto",
+              objectFit: "contain",
               filter: "drop-shadow(0 0 16px rgba(212,168,67,0.5))",
             }}
           />
 
-          {/* Subtitulo */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="m-0 leading-relaxed max-w-[90%]"
-            style={{
-              fontFamily: "var(--font-cinzel)",
-              fontSize: "clamp(8px, 1vw, 14px)",
-              color: "rgba(255,215,0,0.7)",
-            }}
-          >
-            {isBR ? current.descBR : current.descEN}
-          </motion.p>
-
-          {/* Botao JOGAR AGORA -- PNG original, menor */}
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            whileHover={{ scale: 1.05, filter: "brightness(1.15)" }}
-            whileTap={{ scale: 0.97 }}
-            onMouseDown={() => setBtnPressed(true)}
-            onMouseUp={() => setBtnPressed(false)}
-            onMouseLeave={() => setBtnPressed(false)}
-            className="relative border-none cursor-pointer flex items-center justify-center p-0"
-            style={{
-              background: "none",
-              width: "clamp(80px, 13vw, 200px)",
-              aspectRatio: "829 / 234",
-              backgroundImage: `url(${btnPressed ? UI.btnActive : UI.btnDisabled})`,
-              backgroundSize: "contain",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-            }}
-          >
-            <span
-              className="pointer-events-none"
+          {/* Wrapper centraliza subtitle+botão com a largura da logo */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "clamp(140px, 25vw, 400px)" }}>
+            {/* Subtitulo */}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
               style={{
+                margin: "0 0 clamp(8px, 1vw, 14px) 0",
+                maxWidth: "90%",
                 fontFamily: "var(--font-cinzel)",
-                fontSize: "clamp(6px, 0.85vw, 13px)",
-                fontWeight: 900,
-                color: "#FFD700",
-                textShadow:
-                  "0 0 8px rgba(255,215,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
-                letterSpacing: "2px",
+                fontSize: "clamp(10px, 1vw, 24px)",
+                lineHeight: 1.4,
+                color: "rgba(255,215,0,0.7)",
+                textAlign: "center",
               }}
             >
-              {isBR ? "JOGAR AGORA" : "PLAY NOW"}
-            </span>
-          </motion.button>
+              {isBR ? current.descBR : current.descEN}
+            </motion.p>
 
-          {/* Hero dots */}
-          <div className="flex gap-1.5 mt-[2px]">
-            {HERO_GAMES.map((_, i) => (
+            {/* Botao JOGAR AGORA */}
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              whileHover={{ scale: 1.05, filter: "brightness(1.15)" }}
+              whileTap={{ scale: 0.97 }}
+              onMouseDown={() => setBtnPressed(true)}
+              onMouseUp={() => { setBtnPressed(false); onGameSelect?.(current); }}
+              onMouseLeave={() => setBtnPressed(false)}
+              style={{
+                position: "relative",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                background: "none",
+                width: "clamp(80px, 13vw, 200px)",
+                aspectRatio: "829 / 234",
+                backgroundImage: `url(${btnPressed ? UI.btnActive : UI.btnDisabled})`,
+                backgroundSize: "contain",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+              }}
+            >
+              {/* Fio de luz girando na borda */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: "2px 4px 11px 18px",
+                  borderRadius: "6px",
+                  overflow: "hidden",
+                  pointerEvents: "none",
+                  mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+                  maskComposite: "exclude",
+                  WebkitMaskComposite: "xor",
+                  padding: "1.5px",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: "-50%",
+                    background: "conic-gradient(from 0deg, transparent 0%, transparent 70%, #00E676 80%, #FFD700 90%, transparent 100%)",
+                    animation: "spin 3s linear infinite",
+                  }}
+                />
+              </div>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
+                  height: "100%",
+                  pointerEvents: "none",
+                  fontFamily: "var(--font-cinzel)",
+                  fontSize: "clamp(6px, 0.85vw, 13px)",
+                  fontWeight: 900,
+                  color: "#FFD700",
+                  textShadow:
+                    "0 0 8px rgba(255,215,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
+                  letterSpacing: "2px",
+                  marginTop: "-8px",
+                }}
+              >
+                {isBR ? "JOGAR AGORA" : "PLAY NOW"}
+              </span>
+            </motion.button>
+          </div>
+
+          {/* Dots (só aparece se mais de 1 jogo) */}
+          {games.length > 1 && (
+          <div style={{ display: "flex", gap: "6px", marginTop: "2px", width: "clamp(140px, 25vw, 400px)", justifyContent: "center" }}>
+            {games.map((_, i) => (
               <motion.button
                 key={i}
                 onClick={() => goTo(i)}
                 whileHover={{ scale: 1.3 }}
-                className="p-0 cursor-pointer rounded-full"
                 style={{
+                  padding: 0,
+                  cursor: "pointer",
+                  borderRadius: "50%",
                   width: "8px",
                   height: "8px",
                   border: "1px solid #D4A843",
@@ -154,13 +220,22 @@ export default function HeroCarousel({ lang }: HeroProps) {
               />
             ))}
           </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {/* LADO DIREITO: Imagem com Pedestal */}
+      {/* ========================================== */}
+      {/* LADO DIREITO — Imagem com Pedestal          */}
+      {/* ========================================== */}
       <div
-        className="flex items-end justify-center relative overflow-hidden"
-        style={{ gridColumn: 2 }}
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "58%",
+          overflow: "hidden",
+        }}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -169,33 +244,46 @@ export default function HeroCarousel({ lang }: HeroProps) {
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, scale: 0.85, rotate: 3 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="flex items-end justify-center relative w-full h-full"
+            style={{
+              width: "100%",
+              height: "100%",
+              position: "relative",
+            }}
           >
-            {/* Glow atras */}
+            {/* Glow */}
             <div
-              className="absolute w-[60%] h-[60%] rounded-full animate-breathe"
+              className="animate-breathe"
               style={{
-                top: "20%",
+                position: "absolute",
+                top: "15%",
+                left: "20%",
+                width: "60%",
+                height: "60%",
+                borderRadius: "50%",
                 background:
                   "radial-gradient(circle, rgba(0,230,118,0.15) 0%, rgba(212,168,67,0.08) 50%, transparent 70%)",
                 filter: "blur(30px)",
+                pointerEvents: "none",
               }}
             />
+
+            {/* Imagem pedestal */}
             <motion.img
               src={current.pedestalUrl}
               alt={isBR ? current.labelBR : current.labelEN}
-              animate={{
-                y: [0, -6, 0],
-              }}
+              draggable={false}
+              animate={{ y: [0, -6, 0] }}
               transition={{
                 duration: 6,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="relative z-[2] object-contain object-bottom"
               style={{
-                maxHeight: "105%",
-                maxWidth: "95%",
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                objectPosition: "bottom center",
+                zIndex: 2,
                 filter:
                   "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
               }}

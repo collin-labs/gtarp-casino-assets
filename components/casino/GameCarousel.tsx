@@ -46,7 +46,7 @@ export default function GameCarousel({ lang, onGameSelect }: Props) {
       className="relative z-[5] flex flex-col h-full"
       style={{
         padding:
-          "clamp(6px, 1vw, 14px) 0 clamp(20px, 3vw, 45px)",
+          "clamp(10px, 1.5vw, 20px) 0 clamp(20px, 3vw, 45px)",
         gap: "clamp(4px, 0.6vw, 10px)",
       }}
     >
@@ -81,12 +81,12 @@ export default function GameCarousel({ lang, onGameSelect }: Props) {
           scrollBehavior: "smooth",
           WebkitOverflowScrolling: "touch",
           padding: "0 clamp(12px, 2.5vw, 40px)",
-          gap: "clamp(6px, 0.8vw, 14px)",
+          gap: "clamp(10px, 1.2vw, 20px)",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
         }}
       >
-        {GAMES.map((game, i) => (
+        {GAMES.slice(0, 6).map((game, i) => (
           <motion.div
             key={game.id}
             initial={{ opacity: 0, y: 20 }}
@@ -94,7 +94,7 @@ export default function GameCarousel({ lang, onGameSelect }: Props) {
             transition={{ duration: 0.4, delay: i * 0.03 }}
             style={{
               flex: "0 0 auto",
-              width: "clamp(80px, 10vw, 160px)",
+              width: "clamp(100px, 13vw, 200px)",
               scrollSnapAlign: "start",
             }}
           >

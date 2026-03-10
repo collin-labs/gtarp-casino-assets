@@ -39,6 +39,11 @@ body {
   font-family: var(--font-cinzel);
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ─── ANIMAÇÕES ─── */
 
 @keyframes pulseGlow {
@@ -97,12 +102,20 @@ body {
 @keyframes borderGlow {
   0%,
   100% {
-    box-shadow: 0 0 15px rgba(212, 168, 67, 0.3),
-      inset 0 0 15px rgba(212, 168, 67, 0.1);
+    box-shadow:
+      0 0 15px rgba(212, 168, 67, 0.2),
+      0 0 40px rgba(212, 168, 67, 0.08),
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      inset 0 0 15px rgba(212, 168, 67, 0.08);
   }
   50% {
-    box-shadow: 0 0 25px rgba(212, 168, 67, 0.5),
-      inset 0 0 25px rgba(212, 168, 67, 0.15);
+    box-shadow:
+      0 0 25px rgba(212, 168, 67, 0.35),
+      0 0 60px rgba(212, 168, 67, 0.12),
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      inset 0 0 20px rgba(212, 168, 67, 0.12);
   }
 }
 
@@ -172,4 +185,134 @@ html, body, #__next {
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  animation: marquee 50s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 1 — Borda animada @property + sombra flutuante
+   ═══════════════════════════════════════════════════ */
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-rotate {
+  to { --border-angle: 360deg; }
+}
+
+.panel-border-wrapper {
+  padding: 2px;
+  border-radius: 20px;
+  background: conic-gradient(
+    from var(--border-angle),
+    #8B6914 0%,
+    #D4A843 25%,
+    #FFD700 50%,
+    #D4A843 75%,
+    #8B6914 100%
+  );
+  animation: border-rotate 10s linear infinite;
+  box-shadow:
+    0 0 15px rgba(212,168,67,0.25),
+    0 0 40px rgba(212,168,67,0.1),
+    0 8px 30px rgba(0,0,0,0.6),
+    0 20px 60px rgba(0,0,0,0.4);
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 2 — Halo pulsante do letreiro
+   ═══════════════════════════════════════════════════ */
+
+@keyframes god-rays-breathe {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.letreiro-halo {
+  animation: god-rays-breathe 4s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 3 — Dock ripple no click
+   ═══════════════════════════════════════════════════ */
+
+.dock-tab-btn {
+  overflow: hidden;
+}
+
+.dock-tab-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212,168,67,0.4) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width 0s, height 0s;
+}
+
+.dock-tab-btn:active::after {
+  width: 200%;
+  height: 200%;
+  transition: width 0.4s ease-out, height 0.4s ease-out;
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 7 — Scan line + Light leak
+   ═══════════════════════════════════════════════════ */
+
+@keyframes scanline-move {
+  0% { top: -2px; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scanline {
+  animation: scanline-move 8s linear infinite;
+}
+
+@keyframes light-leak-drift {
+  0%, 100% { opacity: 0.4; transform: translate(0, 0); }
+  50% { opacity: 0.7; transform: translate(-3%, 2%); }
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 8 — Ripple universal
+   ═══════════════════════════════════════════════════ */
+
+@keyframes casino-ripple {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ─── Cases: hover swap fechada → semi-aberta ─── */
+.case-card-img-closed { opacity: 1; }
+.case-card-img-semi { opacity: 0 !important; }
+*:hover > * > * > .case-card-img-closed,
+*:hover > * > .case-card-img-closed { opacity: 0 !important; }
+*:hover > * > * > .case-card-img-semi,
+*:hover > * > .case-card-img-semi { opacity: 1 !important; transform: scale(1.05) !important; }
+
+/* ─── Cases: partículas subindo nos cards ─── */
+@keyframes caseParticleRise {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateY(-120%) translateX(6px) scale(0.85); opacity: 0.8; }
+  90%  { opacity: 0.2; }
+  100% { transform: translateY(-240%) translateX(-4px) scale(0.5); opacity: 0; }
 }

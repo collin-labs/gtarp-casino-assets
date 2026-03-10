@@ -14,6 +14,10 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
   const isBR = lang === "br";
   const tabs = isBR ? TABS.br : TABS.en;
 
+  const tooltips = isBR
+    ? ["Jogos de cassino", "Jogos arcade", "Jogos PvP", "Loja de itens", "Eventos e bônus"]
+    : ["Casino games", "Arcade games", "PvP games", "Item store", "Events & bonuses"];
+
   return (
     <div style={{ position: "relative", width: "100%" }}>
       {/* Menu ornamentado PNG MODELO2 */}
@@ -48,7 +52,7 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
             onClick={() => setActiveTab(i)}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-transparent border-none cursor-pointer text-center p-0"
+            className="bg-transparent border-none cursor-pointer text-center p-0 dock-tab-btn"
             style={{
               fontFamily: "var(--font-cinzel)",
               fontSize: "clamp(9px, 1.1vw, 16px)",
@@ -77,7 +81,7 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
                   "0 0 4px rgba(212,168,67,0.3)";
               }
             }}
-            title={tab}
+            title={tooltips[i]}
           >
             {/* Barra de destaque SUPERIOR animada */}
             {i === activeTab && (
