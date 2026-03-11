@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Ajuste do Centro v2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; display: flex; flex-direction: column; align-items: center; padding: 20px; font-family: monospace; color: #fff; gap: 12px; }
+  #container { width: 400px; height: 400px; position: relative; border: 2px dashed #444; overflow: visible; }
+  #wheel { display: block; width: 400px; height: 400px; position: absolute; top: 0; left: 0; }
+  #pointer { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); z-index: 10; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 24px solid #D4A843; }
+  #originDot { position: absolute; width: 10px; height: 10px; background: red; border-radius: 50%; z-index: 20; pointer-events: none; box-shadow: 0 0 8px red, 0 0 16px red; }
+  .controls { background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; width: 450px; }
+  .controls label { display: block; margin: 8px 0 4px; color: #D4A843; font-size: 14px; }
+  .controls input[type=range] { width: 100%; }
+  .value { color: #00E676; font-size: 16px; font-weight: bold; }
+  button { padding: 12px 32px; font-size: 16px; font-weight: bold; background: #D4A843; color: #000; border: none; border-radius: 8px; cursor: pointer; }
+  #result { background: #0a2a0a; border: 2px solid #00E676; padding: 16px; border-radius: 8px; width: 450px; font-size: 14px; color: #00E676; display: none; }
+</style>
+</head>
+<body>
+
+<h2 style="color: #D4A843;">Ajuste do Centro v2 (Range Ampliado)</h2>
+
+<div id="container">
+  <div id="pointer"></div>
+  <img id="wheel" src="assets/roulette/04.wheel-european.png" alt="Roulette" />
+  <div id="originDot"></div>
+</div>
+
+<div class="controls">
+  <label>Centro X: <span id="xVal" class="value">50.0%</span></label>
+  <input type="range" id="sliderX" min="35" max="65" step="0.1" value="50">
+  
+  <label>Centro Y: <span id="yVal" class="value">43.0%</span></label>
+  <input type="range" id="sliderY" min="35" max="65" step="0.1" value="43">
+</div>
+
+<div style="display: flex; gap: 12px;">
+  <button onclick="spin()">GIRAR ROLETA</button>
+  <button onclick="reset()" style="background:#555;color:#fff;">RESETAR ÂNGULO</button>
+</div>
+
+<div id="result"></div>
+
+<p style="color: #888; font-size: 12px; text-align: center; max-width: 400px;">
+  1. Ajuste os sliders até o ponto vermelho ficar NO PINO DOURADO<br>
+  2. Clique GIRAR — a roda NÃO pode sair da borda tracejada<br>
+  3. Me envie os valores X% e Y% finais
+</p>
+
+<script>
+  const wheel = document.getElementById('wheel');
+  const dot = document.getElementById('originDot');
+  const sliderX = document.getElementById('sliderX');
+  const sliderY = document.getElementById('sliderY');
+  const xVal = document.getElementById('xVal');
+  const yVal = document.getElementById('yVal');
+  const result = document.getElementById('result');
+
+  let currentAngle = 0;
+  let isSpinning = false;
+
+  function updateOrigin() {
+    const ox = parseFloat(sliderX.value);
+    const oy = parseFloat(sliderY.value);
+    xVal.textContent = ox.toFixed(1) + '%';
+    yVal.textContent = oy.toFixed(1) + '%';
+    wheel.style.transformOrigin = ox + '% ' + oy + '%';
+    dot.style.left = (ox / 100 * 400 - 5) + 'px';
+    dot.style.top = (oy / 100 * 400 - 5) + 'px';
+  }
+
+  sliderX.addEventListener('input', updateOrigin);
+  sliderY.addEventListener('input', updateOrigin);
+  updateOrigin();
+
+  function reset() {
+    currentAngle = 0;
+    wheel.style.transform = 'rotate(0deg)';
+  }
+
+  function spin() {
+    if (isSpinning) return;
+    isSpinning = true;
+    const start = currentAngle;
+    const end = start + 360 * 5 + Math.random() * 360;
+    const duration = 4000;
+    const t0 = performance.now();
+
+    function frame(now) {
+      const t = Math.min((now - t0) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      wheel.style.transform = 'rotate(' + (start + (end - start) * ease) + 'deg)';
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        currentAngle = end;
+        isSpinning = false;
+        const ox = parseFloat(sliderX.value);
+        const oy = parseFloat(sliderY.value);
+        result.style.display = 'block';
+        result.innerHTML = 
+          '<b>Valores atuais: X=' + ox.toFixed(1) + '% Y=' + oy.toFixed(1) + '%</b><br><br>' +
+          'Se girou perfeito (sem sair da borda), envie esses valores!<br>' +
+          'Se ainda saiu, ajuste mais e gire de novo.';
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+</script>
+
+</body>
+</html>
