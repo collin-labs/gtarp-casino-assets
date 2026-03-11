@@ -12,6 +12,7 @@ import GoldParticles from "./GoldParticles";
 import GameModal from "./GameModal";
 import SlotsGame from "@/components/games/slots/SlotsGame";
 import CasesGame from "@/components/games/cases/CasesGame";
+import RouletteGame from "@/components/games/roulette/RouletteGame";
 import { useRipple } from "@/hooks/use-ripple";
 import { useSoundManager } from "@/hooks/use-sound-manager";
 
@@ -329,7 +330,7 @@ export default function BlackoutCasino() {
                   onPlay={() => {
                     sound.play("success");
                     const name = selectedGame.cardName.toLowerCase();
-                    const gameMap: Record<string, string> = { "slots": "slots", "crash": "crash", "cases": "cases", "caixas": "cases" };
+                    const gameMap: Record<string, string> = { "slots": "slots", "crash": "crash", "cases": "cases", "caixas": "cases", "roulette": "roulette", "roleta": "roulette" };
                     setActiveGame(gameMap[name] || name);
                     setSelectedGame(null);
                   }}
