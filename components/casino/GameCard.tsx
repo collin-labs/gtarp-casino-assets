@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { Game } from "@/lib/games";
 
@@ -23,6 +23,23 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
   const [hovered, setHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleEnter = useCallback(() => {
+    setHovered(true);
+    const vid = videoRef.current;
+    if (vid) {
+      vid.currentTime = 0;
+      vid.play().catch(() => {});
+    }
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    setHovered(false);
+    setMousePos({ x: 50, y: 50 });
+    const vid = videoRef.current;
+    if (vid) vid.pause();
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!cardRef.current) return;
@@ -52,8 +69,8 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
   return (
     <motion.div
       ref={cardRef}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setMousePos({ x: 50, y: 50 }); }}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
       onMouseMove={handleMouseMove}
       onClick={onClick}
       whileHover={{ y: -6, scale: 1.04 }}
@@ -120,6 +137,31 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
           opacity: hovered ? "var(--card-swap-image-opacity)" as any : 1,
         }}
       />
+
+      {/* Video hover — toca ao passar o mouse */}
+      {game.hoverVideo && (
+        <video
+          ref={videoRef}
+          src={game.hoverVideo}
+          muted
+          loop
+          playsInline
+          preload="none"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+            borderRadius: "12px",
+            zIndex: 1,
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.5s ease",
+            pointerEvents: "none",
+          }}
+        />
+      )}
 
       {/* Gradiente escurecimento topo */}
       <div

@@ -1,4 +1,4 @@
-import { cardPath, logoBRPath, logoINPath, goldPath, pedestalPath } from "./assets";
+import { cardPath, logoBRPath, logoINPath, goldPath, pedestalPath, hoverVideoPath, heroVideoPath } from "./assets";
 
 export interface Game {
   id: number;
@@ -14,6 +14,8 @@ export interface Game {
   logoIN: string;
   goldUrl: string;
   pedestalUrl: string;
+  hoverVideo: string;
+  heroVideo: string;
   tier: "S" | "A" | "B" | "C";
 }
 
@@ -49,6 +51,8 @@ export const GAMES: Game[] = RAW.map(([id, cardName, logoName, goldName, labelBR
   logoIN: logoINPath(id, logoName),
   goldUrl: goldPath(id, goldName),
   pedestalUrl: pedestalPath(id, cardName),
+  hoverVideo: hoverVideoPath(id),
+  heroVideo: heroVideoPath(id),
 }));
 
 export const HERO_IDS = [1, 9, 2, 3, 5];

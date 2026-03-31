@@ -32,8 +32,8 @@ export default function CasinoLogo({ visible }: CasinoLogoProps) {
       style={{
         position: "absolute",
         left: 0,                                           /* posicao horizontal base */
-        bottom: "clamp(50px, 8vh, 110px)",                 /* altura — sobe/desce aqui */
-        transform: "translateX(-22%)",                     /* quanto sai da borda esquerda */
+        top: "78%",
+        transform: "translate(-19%, -50%)",
         zIndex: 20,
         pointerEvents: "none",
       }}

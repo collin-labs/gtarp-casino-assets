@@ -127,3 +127,47 @@ export function goldPath(id: number, name: string): string {
 export function pedestalPath(id: number, name: string): string {
   return encodeURI(`${BASE}/image-para-hero/GTARP CASINO IMAGEM COM PEDESTAL/${id}.${name}-IMAGEM-COM-PEDESTAL.png`);
 }
+
+// Video hover por jogo (videos/hover/)
+const HOVER_VIDEO_FILES: Record<number, string> = {
+  1:  "1.crash.webm",
+  2:  "2.slot.webm",
+  3:  "3.mines.webm",
+  4:  "4.blackjack.webm",
+  5:  "5.roulette.webm",
+  6:  "6.poker.webm",
+  7:  "7.dice.webm",
+  8:  "8.plinko.webm",
+  9:  "9.bichos.webm",
+  10: "10.brasilian-roulette.webm",
+  11: "11.case-battle.webm",
+  12: "12.coinflip.webm",
+  13: "13.jackpot.webm",
+  14: "14.cases.webm",
+  15: "15.upgrade.webm",
+  16: "16.marketplace.webm",
+  17: "17.inventory.webm",
+  18: "18.loteria.webm",
+  19: "19.dailyfree.webm",
+  20: "20.giveaways.webm",
+  21: "21.bingo.webm",
+  22: "22.poolgame.webm",
+};
+
+export function hoverVideoPath(id: number): string {
+  const file = HOVER_VIDEO_FILES[id];
+  if (!file) return "";
+  return `${BASE}/videos/hover/${file}`;
+}
+
+// Video hero por jogo (videos/hero/) — composicao propria pro hero
+const HERO_VIDEO_FILES: Record<number, string> = {
+  5:  "5.roulette.webm",
+  9:  "9.bichos.webm",
+};
+
+export function heroVideoPath(id: number): string {
+  const file = HERO_VIDEO_FILES[id];
+  if (!file) return "";
+  return `${BASE}/videos/hero/${file}`;
+}

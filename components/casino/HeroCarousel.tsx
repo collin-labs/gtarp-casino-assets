@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Game } from "@/lib/games";
 import { UI } from "@/lib/assets";
@@ -16,8 +16,28 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
   const [heroIdx, setHeroIdx] = useState(0);
   const [btnPressed, setBtnPressed] = useState(false);
   const [direction, setDirection] = useState(1);
+  const [heroHovered, setHeroHovered] = useState(false);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
   const isBR = lang === "br";
   const current = games[heroIdx];
+
+  const handleHeroEnter = useCallback(() => {
+    setHeroHovered(true);
+    heroVideoRef.current?.pause();
+  }, []);
+
+  const handleHeroLeave = useCallback(() => {
+    setHeroHovered(false);
+    heroVideoRef.current?.play().catch(() => {});
+  }, []);
+
+  // Roleta comeca no segundo 2
+  const heroStartOffset: Record<number, number> = { 5: 2 };
+  const handleVideoLoaded = useCallback(() => {
+    const vid = heroVideoRef.current;
+    const offset = heroStartOffset[current.id];
+    if (vid && offset) vid.currentTime = offset;
+  }, [current.id]);
 
   useEffect(() => {
     setHeroIdx(0);
@@ -46,6 +66,8 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
 
   return (
     <div
+      onMouseEnter={current.heroVideo ? handleHeroEnter : undefined}
+      onMouseLeave={current.heroVideo ? handleHeroLeave : undefined}
       style={{
         position: "relative", 
         zIndex: 5,
@@ -54,6 +76,28 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
         overflow: "clip",
       }}
     >
+      {/* Video hero — cobre o hero inteiro, texto fica por cima */}
+      {current.heroVideo && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+          <video
+            ref={heroVideoRef}
+            src={current.heroVideo}
+            autoPlay
+            muted
+            loop
+            playsInline
+            onLoadedData={handleVideoLoaded}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              opacity: heroHovered ? 0.6 : 1,
+              transition: "opacity 0.4s ease",
+            }}
+          />
+        </div>
+      )}
       {/* ========================================== */}
       {/* LADO ESQUERDO — Logo + Subtitle + Button   */}
       {/* ========================================== */}
@@ -78,6 +122,8 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
             alignItems: "flex-start",
             gap: "clamp(1px, 0.3vw, 4px)",
             zIndex: 2,
+            paddingTop: "clamp(6px, 1vw, 16px)",
+            paddingLeft: "clamp(6px, 1vw, 16px)",
           }}
         >
           {/* Logo do jogo */}
@@ -226,72 +272,74 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
       </AnimatePresence>
 
       {/* ========================================== */}
-      {/* LADO DIREITO — Imagem com Pedestal          */}
+      {/* LADO DIREITO — Pedestal (so quando nao tem heroVideo) */}
       {/* ========================================== */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "58%",
-          overflow: "hidden",
-        }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`hero-right-${heroIdx}`}
-            initial={{ opacity: 0, scale: 0.85, rotate: -3 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0, scale: 0.85, rotate: 3 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              width: "100%",
-              height: "100%",
-              position: "relative",
-            }}
-          >
-            {/* Glow */}
-            <div
-              className="animate-breathe"
-              style={{
-                position: "absolute",
-                top: "15%",
-                left: "20%",
-                width: "60%",
-                height: "60%",
-                borderRadius: "50%",
-                background:
-                  "radial-gradient(circle, rgba(0,230,118,0.15) 0%, rgba(212,168,67,0.08) 50%, transparent 70%)",
-                filter: "blur(30px)",
-                pointerEvents: "none",
-              }}
-            />
-
-            {/* Imagem pedestal */}
-            <motion.img
-              src={current.pedestalUrl}
-              alt={isBR ? current.labelBR : current.labelEN}
-              draggable={false}
-              animate={{ y: [0, -6, 0] }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+      {!current.heroVideo && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: "58%",
+            overflow: "hidden",
+          }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`hero-right-${heroIdx}`}
+              initial={{ opacity: 0, scale: 0.85, rotate: -3 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.85, rotate: 3 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "contain",
-                objectPosition: "bottom center",
-                zIndex: 2,
-                filter:
-                  "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
+                position: "relative",
               }}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </div>
+            >
+              {/* Glow */}
+              <div
+                className="animate-breathe"
+                style={{
+                  position: "absolute",
+                  top: "15%",
+                  left: "20%",
+                  width: "60%",
+                  height: "60%",
+                  borderRadius: "50%",
+                  background:
+                    "radial-gradient(circle, rgba(0,230,118,0.15) 0%, rgba(212,168,67,0.08) 50%, transparent 70%)",
+                  filter: "blur(30px)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Imagem pedestal */}
+              <motion.img
+                src={current.pedestalUrl}
+                alt={isBR ? current.labelBR : current.labelEN}
+                draggable={false}
+                animate={{ y: [0, -6, 0] }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  objectPosition: "bottom center",
+                  zIndex: 2,
+                  filter:
+                    "drop-shadow(0 0 20px rgba(212,168,67,0.4)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
+                }}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
