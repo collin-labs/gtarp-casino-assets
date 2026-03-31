@@ -1,0 +1,430 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════
+   BLACKOUT CASINO — Design Tokens & Animations
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --font-cinzel: "Cinzel", serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --gold-light: #ffd700;
+  --gold-mid: #d4a843;
+  --gold-dark: #8b6914;
+  --emerald: #00e676;
+  --emerald-dark: #004d25;
+  --black-deep: #0a0a0a;
+
+  /* ========================================================
+     CONFIGURADOR DE CARDS — BC muda aqui, hot reload instantaneo
+     small = cards 2x2 (CASSINO/ARCADE grid direito)
+     large = cards grandes (PVP 3 colunas, LOJA 2x2)
+     ======================================================== */
+
+  /* SMALL: logo — tamanho e posicao */
+  --card-sm-logo-width: clamp(60px, 55%, 180px);
+  --card-sm-logo-top: clamp(-15px, 0.8vw, 0px);
+  --card-sm-logo-offset-y: 0px;                    /* ajuste fino vertical: -5px=sobe, 5px=desce */
+  --card-sm-logo-opacity: 0.9;
+  --card-sm-logo-opacity-hover: 1;
+  --card-sm-logo-brightness: 1.0;                  /* brilho: 1=normal, 1.2=mais brilho, 0.8=mais escuro */
+  --card-sm-logo-contrast: 1.0;                    /* contraste: 1=normal, 1.1=mais nitido */
+
+  /* SMALL: fundo escuro atras da logo */
+  --card-sm-overlay-height: 50%;
+  --card-sm-overlay-opacity: 0.85;                 /* 0=sem fundo, 1=preto total */
+
+  /* LARGE: logo — tamanho e posicao */
+  --card-lg-logo-width: clamp(100px, 50%, 240px);
+  --card-lg-logo-top: clamp(8px, 1.2vw, 18px);
+  --card-lg-logo-offset-y: 0px;
+  --card-lg-logo-opacity: 0.92;
+  --card-lg-logo-opacity-hover: 1;
+  --card-lg-logo-brightness: 1.0;
+  --card-lg-logo-contrast: 1.0;
+
+  /* LARGE: fundo escuro atras da logo */
+  --card-lg-overlay-height: 45%;
+  --card-lg-overlay-opacity: 0.9;
+
+  /* SWAP: efeito hover (imagem some, dourada aparece) */
+  --card-swap-image-opacity: 0.12;                 /* 0=some total, 1=fica */
+  --card-swap-speed: 0.5s;                         /* velocidade do fade */
+  --card-swap-logo-hide: 1;                        /* 1=logo some no hover, 0=logo fica */
+}
+
+/* Classes do overlay escuro atras da logo (CSS puro, vars funcionam) */
+.card-overlay-sm {
+  height: var(--card-sm-overlay-height);
+  background: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+  opacity: var(--card-sm-overlay-opacity);
+}
+.card-overlay-lg {
+  height: var(--card-lg-overlay-height);
+  background: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+  opacity: var(--card-lg-overlay-opacity);
+}
+
+/* Atmosferas por aba — scan line speed + feixo pulsacao */
+.atmos-cassino .animate-scanline { animation-duration: 8s; }
+.atmos-arcade .animate-scanline  { animation-duration: 6s; }
+.atmos-pvp .animate-scanline     { animation-duration: 10s; }
+.atmos-loja .animate-scanline    { animation-duration: 8s; }
+.atmos-eventos .animate-scanline { animation-duration: 5s; }
+
+@keyframes feixoPulseArcade {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,230,118,0.3); }
+  50%      { box-shadow: 0 0 15px rgba(0,230,118,0.55); }
+}
+@keyframes feixoPulseEventos {
+  0%, 100% { box-shadow: 0 0 5px rgba(0,230,118,0.2); }
+  50%      { box-shadow: 0 0 22px rgba(0,230,118,0.65); }
+}
+
+@keyframes ctaPulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.25); }
+}
+.cta-pulse {
+  animation: ctaPulse 2.5s ease-in-out infinite !important;
+}
+
+/* Noise texture cinematografico sobre o painel */
+.panel-noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes cardGoldPulse {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+.card-pulse {
+  animation: cardGoldPulse 3s ease-in-out infinite !important;
+  animation-delay: var(--pulse-delay, 0s) !important;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #__next {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #000;
+  overflow: hidden;
+  font-family: var(--font-cinzel);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── ANIMAÇÕES ─── */
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.6),
+      0 0 30px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.9),
+      0 0 50px rgba(255, 215, 0, 0.5), 0 0 80px rgba(255, 215, 0, 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes panelCardShine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes logoAuraPulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+}
+
+@keyframes logoShimmer {
+  0%   { background-position: 250% 0; }
+  100% { background-position: -250% 0; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes borderGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 15px rgba(212, 168, 67, 0.2),
+      0 0 40px rgba(212, 168, 67, 0.08),
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      inset 0 0 15px rgba(212, 168, 67, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 25px rgba(212, 168, 67, 0.35),
+      0 0 60px rgba(212, 168, 67, 0.12),
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      inset 0 0 20px rgba(212, 168, 67, 0.12);
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* ─── CLASSES DE ANIMAÇÃO ─── */
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease infinite;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-border-glow {
+  animation: borderGlow 4s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0% { opacity: 0.3; transform: scale(1); }
+  100% { opacity: 0.8; transform: scale(1.15); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Hide scrollbar for carousel */
+.overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}
+.overflow-x-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html, body, #__next {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  animation: marquee 50s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 1 — Borda animada @property + sombra flutuante
+   ═══════════════════════════════════════════════════ */
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-rotate {
+  to { --border-angle: 360deg; }
+}
+
+.panel-border-wrapper {
+  padding: 2px;
+  border-radius: 20px;
+  background: conic-gradient(
+    from var(--border-angle),
+    #8B6914 0%,
+    #D4A843 25%,
+    #FFD700 50%,
+    #D4A843 75%,
+    #8B6914 100%
+  );
+  animation: border-rotate 10s linear infinite;
+  box-shadow:
+    0 0 15px rgba(212,168,67,0.25),
+    0 0 40px rgba(212,168,67,0.1),
+    0 8px 30px rgba(0,0,0,0.6),
+    0 20px 60px rgba(0,0,0,0.4);
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 2 — Halo pulsante do letreiro
+   ═══════════════════════════════════════════════════ */
+
+@keyframes god-rays-breathe {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.letreiro-halo {
+  animation: god-rays-breathe 4s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 3 — Dock ripple no click
+   ═══════════════════════════════════════════════════ */
+
+.dock-tab-btn {
+  overflow: hidden;
+}
+
+.dock-tab-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212,168,67,0.4) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width 0s, height 0s;
+}
+
+.dock-tab-btn:active::after {
+  width: 200%;
+  height: 200%;
+  transition: width 0.4s ease-out, height 0.4s ease-out;
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 7 — Scan line + Light leak
+   ═══════════════════════════════════════════════════ */
+
+@keyframes scanline-move {
+  0% { top: -2px; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scanline {
+  animation: scanline-move 8s linear infinite;
+}
+
+@keyframes light-leak-drift {
+  0%, 100% { opacity: 0.4; transform: translate(0, 0); }
+  50% { opacity: 0.7; transform: translate(-3%, 2%); }
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 8 — Ripple universal
+   ═══════════════════════════════════════════════════ */
+
+@keyframes casino-ripple {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ─── Cases: hover swap fechada → semi-aberta ─── */
+.case-card-img-closed { opacity: 1; }
+.case-card-img-semi { opacity: 0 !important; }
+*:hover > * > * > .case-card-img-closed,
+*:hover > * > .case-card-img-closed { opacity: 0 !important; }
+*:hover > * > * > .case-card-img-semi,
+*:hover > * > .case-card-img-semi { opacity: 1 !important; transform: scale(1.05) !important; }
+
+/* ─── Cases: partículas subindo nos cards ─── */
+@keyframes caseParticleRise {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateY(-120%) translateX(6px) scale(0.85); opacity: 0.8; }
+  90%  { opacity: 0.2; }
+  100% { transform: translateY(-240%) translateX(-4px) scale(0.5); opacity: 0; }
+}

@@ -1,0 +1,112 @@
+"use client";
+
+import { motion, LayoutGroup } from "framer-motion";
+import { UI } from "@/lib/assets";
+import { TABS } from "@/lib/games";
+
+interface DockProps {
+  lang: "br" | "in";
+  activeTab: number;
+  setActiveTab: (tab: number) => void;
+}
+
+export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
+  const isBR = lang === "br";
+  const tabs = isBR ? TABS.br : TABS.en;
+
+  const tooltips = isBR
+    ? ["Jogos de cassino", "Jogos arcade", "Jogos PvP", "Loja de itens", "Eventos e bônus"]
+    : ["Casino games", "Arcade games", "PvP games", "Item store", "Events & bonuses"];
+
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      {/* Menu ornamentado PNG MODELO2 */}
+      <img
+        src={UI.dock}
+        alt=""
+        style={{
+          width: "100%",
+          height: "auto",
+          display: "block",
+          pointerEvents: "none",
+          filter: "drop-shadow(0 0 20px rgba(212,168,67,0.35))",
+        }}
+      />
+
+      {/* 5 tabs sobrepostos no PNG */}
+      <LayoutGroup id="dock-tabs">
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "8%",
+          right: "8%",
+          transform: "translateY(-20%)",
+          display: "grid",
+          gridTemplateColumns: "repeat(5, 1fr)",
+          alignItems: "center",
+        }}
+      >
+        {tabs.map((tab, i) => (
+          <motion.button
+            key={i}
+            onClick={() => setActiveTab(i)}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-transparent border-none cursor-pointer text-center p-0 dock-tab-btn"
+            style={{
+              fontFamily: "var(--font-cinzel)",
+              fontSize: "clamp(9px, 1.1vw, 16px)",
+              fontWeight: 900,
+              color: i === activeTab ? "#00E676" : "#D4A843",
+              textShadow:
+                i === activeTab
+                  ? "0 0 7px rgba(0,230,118,0.8), 0 0 20px rgba(0,230,118,0.5), 0 0 40px rgba(0,230,118,0.2)"
+                  : "0 0 4px rgba(212,168,67,0.3)",
+              letterSpacing: "2px",
+              position: "relative",
+              transition: "color 0.3s, text-shadow 0.3s",
+              paddingTop: "6px",
+            }}
+            onMouseEnter={(e) => {
+              if (i !== activeTab) {
+                e.currentTarget.style.color = "#FFD700";
+                e.currentTarget.style.textShadow =
+                  "0 0 7px rgba(255,215,0,0.6), 0 0 18px rgba(255,215,0,0.3), 0 0 35px rgba(255,215,0,0.12)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (i !== activeTab) {
+                e.currentTarget.style.color = "#D4A843";
+                e.currentTarget.style.textShadow =
+                  "0 0 4px rgba(212,168,67,0.3)";
+              }
+            }}
+            title={tooltips[i]}
+          >
+            {/* Barra de destaque SUPERIOR animada */}
+            {i === activeTab && (
+              <motion.div
+                layoutId="dock-active-bar"
+                style={{
+                  position: "absolute",
+                  top: "-2px",
+                  left: "15%",
+                  right: "15%",
+                  height: "3px",
+                  background:
+                    "linear-gradient(90deg, transparent, #00E676, transparent)",
+                  boxShadow: "0 0 10px rgba(0,230,118,0.6), 0 2px 12px rgba(0,230,118,0.35), 0 0 25px rgba(0,230,118,0.15)",
+                  borderRadius: "0 0 2px 2px",
+                }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
+            {tab}
+          </motion.button>
+        ))}
+      </div>
+      </LayoutGroup>
+    </div>
+  );
+}
