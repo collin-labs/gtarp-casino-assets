@@ -21,9 +21,13 @@ interface GameCardProps {
 
 export default function GameCard({ game, isBR, onClick, feixoColor = "green", showLogo = true, largeCard = false }: GameCardProps) {
   const [hovered, setHovered] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Card image so desaparece quando hover + video carregou
+  const showVideo = hovered && videoReady;
 
   const handleEnter = useCallback(() => {
     setHovered(true);
@@ -36,6 +40,7 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
 
   const handleLeave = useCallback(() => {
     setHovered(false);
+    setVideoReady(false);
     setMousePos({ x: 50, y: 50 });
     const vid = videoRef.current;
     if (vid) vid.pause();
@@ -69,14 +74,10 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
   return (
     <motion.div
       ref={cardRef}
-      role="button"
-      tabIndex={0}
-      aria-label={isBR ? game.labelBR : game.labelEN}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
       onMouseMove={handleMouseMove}
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
       whileHover={{ y: -6, scale: 1.04 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -138,7 +139,7 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
           transition: "filter 0.4s ease, opacity var(--card-swap-speed) ease",
           borderRadius: "12px",
           zIndex: 1,
-          opacity: hovered ? "var(--card-swap-image-opacity)" as any : 1,
+          opacity: (game.hoverVideo ? showVideo : hovered) ? "var(--card-swap-image-opacity)" as any : 1,
         }}
       />
 
@@ -151,6 +152,7 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
           loop
           playsInline
           preload="none"
+          onCanPlay={() => setVideoReady(true)}
           style={{
             position: "absolute",
             inset: 0,
@@ -160,7 +162,7 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
             objectPosition: "center",
             borderRadius: "12px",
             zIndex: 1,
-            opacity: hovered ? 1 : 0,
+            opacity: showVideo ? 1 : 0,
             transition: "opacity 0.5s ease",
             pointerEvents: "none",
           }}
@@ -263,7 +265,7 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
               filter: `${hovered ? shadowHover : shadowIdle} brightness(var(${pre}-logo-brightness)) contrast(var(${pre}-logo-contrast))`,
               pointerEvents: "none",
               zIndex: 6,
-              opacity: hovered
+              opacity: (game.hoverVideo ? showVideo : hovered)
                 ? (`calc(var(${pre}-logo-opacity-hover) * (1 - var(--card-swap-logo-hide)))` as any)
                 : (`var(${pre}-logo-opacity)` as any),
               transition: "opacity 0.4s ease, filter 0.3s ease, transform 0.4s ease",

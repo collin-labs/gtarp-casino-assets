@@ -16,6 +16,7 @@ import CasinoLogo from "./CasinoLogo";
 import { useRipple } from "@/hooks/use-ripple";
 import { useSoundManager } from "@/hooks/use-sound-manager";
 import { useGameAPI } from "@/hooks/use-game-api";
+import { CrashGame } from "@/components/games/crash";
 
 export default function BlackoutCasino() {
   const { lang, setLang, activeTab, setActiveTab, selectedGame, setSelectedGame, activeGame, setActiveGame, saldo } = useCasino();
@@ -284,7 +285,6 @@ export default function BlackoutCasino() {
                   }}
                   whileTap={{ scale: 0.95 }}
                   className="cursor-pointer p-0 bg-transparent border-none"
-                  aria-label={key === "br" ? "Mudar para Português" : "Switch to English"}
                   title={key === "br" ? "Português" : "English"}
                   style={{
                     width: "clamp(22px, 2vw, 32px)",
@@ -322,7 +322,6 @@ export default function BlackoutCasino() {
               }}
               whileTap={{ scale: 0.95 }}
               onClick={() => { sound.play("click"); setShowDeposit(true); }}
-              aria-label={lang === "br" ? `Saldo: ${saldo} GCoin. Clique para depositar ou sacar` : `Balance: ${saldo} GCoin. Click to deposit or withdraw`}
               title={lang === "br" ? "Depositar ou sacar GCoin" : "Deposit or withdraw GCoin"}
               className="bg-transparent p-0"
               style={{
@@ -387,7 +386,21 @@ export default function BlackoutCasino() {
               )}
             </AnimatePresence>
 
-            {/* JOGO ATIVO — renderiza dentro do painel */}
+            {/* JOGO ATIVO — renderiza DENTRO do painel, cobrindo tudo */}
+            <AnimatePresence mode="wait">
+              {activeGame === "crash" && (
+                <CrashGame
+                  key="crash"
+                  onBack={() => setActiveGame(null)}
+                />
+              )}
+              {activeGame && activeGame !== "crash" && (
+                <ComingSoon
+                  key={activeGame}
+                  onBack={() => setActiveGame(null)}
+                />
+              )}
+            </AnimatePresence>
 
             {/* Light leak — cor muda por atmosfera */}
             <div
@@ -419,16 +432,6 @@ export default function BlackoutCasino() {
               }}
             />
           </motion.div>
-
-          {/* JOGO ATIVO — ComingSoon como fallback para jogos sem componente */}
-          <AnimatePresence mode="wait">
-            {activeGame && (
-              <ComingSoon
-                key={activeGame}
-                onBack={() => setActiveGame(null)}
-              />
-            )}
-          </AnimatePresence>
 
           {/* DEPOSITO — modal de depositar/sacar GCoin */}
           <AnimatePresence>
