@@ -27,6 +27,9 @@ const ASSETS = {
   iconGcoin: "/assets/shared/icons/icon-gcoin.png",
   iconInfo: "/assets/shared/icons/icon-info.png",
   iconHistory: "/assets/shared/icons/icon-history.png",
+  iconPaytable: "/assets/shared/icons/icon-paytable.png",
+  iconCopy: "/assets/shared/icons/icon-copy.png",
+  iconProvablyFair: "/assets/shared/icons/icon-provably-fair.png",
   iconSoundOn: "/assets/shared/icons/icon-sound-on.png",
   iconSoundOff: "/assets/shared/icons/icon-sound-off.png",
   logoSlotsBr: "/assets/logos-br-para-cards/2.LOGO-BR-SLOT-MACHINE.png",
@@ -107,7 +110,66 @@ const TEXTS = {
   backToVideo: { br: "VOLTAR AO VIDEO", en: "BACK TO VIDEO" },
   fsRemaining: { br: "FREE SPINS", en: "FREE SPINS" },
   multiplier: { br: "MULTIPLICADOR", en: "MULTIPLIER" },
+  paytable: { br: "TABELA DE PAGAMENTOS", en: "PAYTABLE" },
+  history: { br: "HISTÓRICO", en: "HISTORY" },
+  provablyFair: { br: "PROVABLY FAIR", en: "PROVABLY FAIR" },
+  highSymbols: { br: "SÍMBOLOS PREMIUM", en: "HIGH SYMBOLS" },
+  lowSymbols: { br: "SÍMBOLOS GEMAS", en: "LOW SYMBOLS" },
+  specialSymbols: { br: "ESPECIAIS", en: "SPECIAL" },
+  triggersFs: { br: "Ativa Free Spins", en: "Triggers Free Spins" },
+  multipliesWin: { br: "Multiplica ganhos", en: "Multiplies wins" },
+  serverSeedHash: { br: "Hash do Server Seed", en: "Server Seed Hash" },
+  clientSeed: { br: "Client Seed", en: "Client Seed" },
+  nonce: { br: "Nonce", en: "Nonce" },
+  verify: { br: "VERIFICAR", en: "VERIFY" },
+  provablyFairDesc: { br: "Cada resultado é verificável criptograficamente. O server seed é revelado após cada rodada.", en: "Each result is cryptographically verifiable. Server seed is revealed after each round." },
+  buyFreeSpins: { br: "COMPRAR FREE SPINS", en: "BUY FREE SPINS" },
+  guaranteedSpins: { br: "10 giros grátis garantidos", en: "10 guaranteed free spins" },
+  cost: { br: "CUSTO", en: "COST" },
+  currentBalance: { br: "Saldo", en: "Balance" },
+  confirm: { br: "CONFIRMAR", en: "CONFIRM" },
+  cancel: { br: "CANCELAR", en: "CANCEL" },
+  copied: { br: "Copiado!", en: "Copied!" },
+  noHistory: { br: "Nenhuma rodada ainda", en: "No rounds yet" },
 };
+
+// Paytable data (multiplicadores por quantidade de simbolos)
+const PAYTABLE = {
+  crown:     { name: { br: "Coroa", en: "Crown" }, payouts: { 8: 2, 9: 3, 10: 5, 11: 8, 12: 15 } },
+  ring:      { name: { br: "Anel", en: "Ring" }, payouts: { 8: 1.5, 9: 2.5, 10: 4, 11: 6, 12: 12 } },
+  hourglass: { name: { br: "Ampulheta", en: "Hourglass" }, payouts: { 8: 1.5, 9: 2, 10: 3, 11: 5, 12: 10 } },
+  chalice:   { name: { br: "Cálice", en: "Chalice" }, payouts: { 8: 1, 9: 1.5, 10: 2.5, 11: 4, 12: 8 } },
+  ruby:      { name: { br: "Rubi", en: "Ruby" }, payouts: { 8: 0.5, 9: 0.8, 10: 1.2, 11: 2, 12: 4 } },
+  sapphire:  { name: { br: "Safira", en: "Sapphire" }, payouts: { 8: 0.5, 9: 0.8, 10: 1.2, 11: 2, 12: 4 } },
+  emerald:   { name: { br: "Esmeralda", en: "Emerald" }, payouts: { 8: 0.4, 9: 0.6, 10: 1, 11: 1.5, 12: 3 } },
+  amethyst:  { name: { br: "Ametista", en: "Amethyst" }, payouts: { 8: 0.4, 9: 0.6, 10: 1, 11: 1.5, 12: 3 } },
+  topaz:     { name: { br: "Topázio", en: "Topaz" }, payouts: { 8: 0.3, 9: 0.5, 10: 0.8, 11: 1.2, 12: 2.5 } },
+  scatter:   { name: { br: "Scatter", en: "Scatter" }, payouts: { 4: "10FS", 5: "15FS", 6: "20FS" } },
+};
+
+// Mock history data
+const MOCK_HISTORY = [
+  { id: 1, bet: 10, win: 45, multi: "x4.5", time: "12:34" },
+  { id: 2, bet: 10, win: 0, multi: "-", time: "12:33" },
+  { id: 3, bet: 25, win: 312, multi: "x12.5", time: "12:31" },
+  { id: 4, bet: 25, win: 0, multi: "-", time: "12:30" },
+  { id: 5, bet: 10, win: 18, multi: "x1.8", time: "12:28" },
+  { id: 6, bet: 50, win: 0, multi: "-", time: "12:26" },
+  { id: 7, bet: 50, win: 125, multi: "x2.5", time: "12:24" },
+  { id: 8, bet: 10, win: 0, multi: "-", time: "12:22" },
+  { id: 9, bet: 10, win: 0, multi: "-", time: "12:20" },
+  { id: 10, bet: 100, win: 850, multi: "x8.5", time: "12:18" },
+  { id: 11, bet: 25, win: 37, multi: "x1.5", time: "12:15" },
+  { id: 12, bet: 25, win: 0, multi: "-", time: "12:13" },
+  { id: 13, bet: 10, win: 22, multi: "x2.2", time: "12:10" },
+  { id: 14, bet: 10, win: 0, multi: "-", time: "12:08" },
+  { id: 15, bet: 50, win: 0, multi: "-", time: "12:05" },
+  { id: 16, bet: 50, win: 175, multi: "x3.5", time: "12:02" },
+  { id: 17, bet: 100, win: 0, multi: "-", time: "11:58" },
+  { id: 18, bet: 10, win: 15, multi: "x1.5", time: "11:55" },
+  { id: 19, bet: 25, win: 0, multi: "-", time: "11:52" },
+  { id: 20, bet: 25, win: 62, multi: "x2.5", time: "11:48" },
+];
 
 // Grid mockado com simbolos aleatorios
 function generateMockGrid(): { id: string; path: string; tier: string; color: string; uniqueKey: string }[][] {
@@ -188,6 +250,16 @@ export default function SlotsGame({
   const [classicReels, setClassicReels] = useState<typeof CLASSIC_SYMBOLS[number][][]>([[], [], []]);
   const [classicSpinning, setClassicSpinning] = useState([false, false, false]);
   const [classicStopped, setClassicStopped] = useState([false, false, false]);
+  
+  // Modais
+  const [showPaytable, setShowPaytable] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyTab, setHistoryTab] = useState<"history" | "provablyFair">("history");
+  const [showBuyBonus, setShowBuyBonus] = useState(false);
+  const [clientSeed, setClientSeed] = useState("a1b2c3d4e5f6");
+  const [nonce, setNonce] = useState(1247);
+  const [copiedSeed, setCopiedSeed] = useState(false);
+  const serverSeedHash = "8f14e45fceea167a5a36dedd4bea2543b09a7c12e8f14e45fceea167a5a36dedd";
   
   // Refs
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -524,6 +596,27 @@ export default function SlotsGame({
         break;
     }
   }, [bet, saldo]);
+  
+  // Copy server seed hash
+  const handleCopyHash = useCallback(() => {
+    navigator.clipboard.writeText(serverSeedHash);
+    setCopiedSeed(true);
+    setTimeout(() => setCopiedSeed(false), 2000);
+  }, [serverSeedHash]);
+  
+  // Buy bonus (100x bet)
+  const handleBuyBonus = useCallback(() => {
+    const cost = bet * 100;
+    if (cost > saldo) return;
+    
+    setSaldo(saldo - cost);
+    setShowBuyBonus(false);
+    setFreeSpinsRemaining(10);
+    setFreeSpinsTotal(10);
+    setFsMultiplier(1);
+    setFsTotalWin(0);
+    setScreen("fsTrigger");
+  }, [bet, saldo, setSaldo]);
 
   // ==========================================================================
   // RENDER HELPERS
@@ -2467,6 +2560,957 @@ export default function SlotsGame({
   );
 
   // ==========================================================================
+  // TELA 8 — PAYTABLE MODAL
+  // ==========================================================================
+  
+  const renderPaytableModal = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setShowPaytable(false)}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 90,
+        background: "rgba(0,0,0,0.7)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "clamp(320px, 70vw, 700px)",
+          maxHeight: "80vh",
+          overflowY: "auto",
+          background: "linear-gradient(180deg, rgba(26,26,46,0.98), rgba(10,10,10,0.99))",
+          border: "1px solid rgba(212,168,67,0.4)",
+          borderRadius: "18px",
+          padding: "clamp(16px, 3vw, 32px)",
+          boxShadow: "0 0 60px rgba(212,168,67,0.1)",
+          position: "relative",
+        }}
+      >
+        {/* Close Button */}
+        <motion.button
+          onClick={() => setShowPaytable(false)}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          style={{
+            position: "absolute",
+            top: "clamp(8px, 1.5vw, 16px)",
+            right: "clamp(8px, 1.5vw, 16px)",
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(212,168,67,0.3)",
+            color: "#D4A843",
+            fontSize: "18px",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          X
+        </motion.button>
+        
+        {/* Title */}
+        <h2
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontWeight: 700,
+            fontSize: "clamp(18px, 2.5vw, 28px)",
+            color: "#D4A843",
+            textTransform: "uppercase",
+            letterSpacing: "3px",
+            textAlign: "center",
+            marginBottom: "clamp(16px, 2vw, 24px)",
+            textShadow: "0 0 15px rgba(212,168,67,0.4)",
+          }}
+        >
+          {t("paytable")}
+        </h2>
+        
+        {/* HIGH SYMBOLS Section */}
+        <div style={{ marginBottom: "clamp(16px, 2vw, 24px)" }}>
+          <h3
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 600,
+              fontSize: "clamp(12px, 1.4vw, 16px)",
+              color: "#FFD700",
+              textTransform: "uppercase",
+              letterSpacing: "2px",
+              marginBottom: "clamp(8px, 1vw, 12px)",
+              borderBottom: "1px solid rgba(255,215,0,0.2)",
+              paddingBottom: "clamp(4px, 0.5vw, 8px)",
+            }}
+          >
+            {t("highSymbols")}
+          </h3>
+          
+          {["crown", "ring", "hourglass", "chalice"].map((symbolId) => {
+            const symbol = VIDEO_SYMBOLS.find(s => s.id === symbolId)!;
+            const payout = PAYTABLE[symbolId as keyof typeof PAYTABLE];
+            
+            return (
+              <div
+                key={symbolId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "clamp(8px, 1vw, 14px)",
+                  padding: "clamp(6px, 0.8vw, 10px) 0",
+                  borderBottom: "1px solid rgba(212,168,67,0.08)",
+                }}
+              >
+                <img
+                  src={symbol.path}
+                  alt={symbolId}
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    objectFit: "contain",
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: 500,
+                    fontSize: "clamp(11px, 1.2vw, 14px)",
+                    color: symbol.color,
+                    minWidth: "clamp(60px, 8vw, 90px)",
+                  }}
+                >
+                  {payout.name[lang]}
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "clamp(6px, 1vw, 12px)",
+                    flexWrap: "wrap",
+                    flex: 1,
+                  }}
+                >
+                  {Object.entries(payout.payouts).map(([count, multi]) => (
+                    <span
+                      key={count}
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "clamp(9px, 1vw, 12px)",
+                        color: "rgba(255,255,255,0.7)",
+                      }}
+                    >
+                      {count}+ = x{multi}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* LOW SYMBOLS Section */}
+        <div style={{ marginBottom: "clamp(16px, 2vw, 24px)" }}>
+          <h3
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 600,
+              fontSize: "clamp(12px, 1.4vw, 16px)",
+              color: "#A8A8A8",
+              textTransform: "uppercase",
+              letterSpacing: "2px",
+              marginBottom: "clamp(8px, 1vw, 12px)",
+              borderBottom: "1px solid rgba(168,168,168,0.2)",
+              paddingBottom: "clamp(4px, 0.5vw, 8px)",
+            }}
+          >
+            {t("lowSymbols")}
+          </h3>
+          
+          {["ruby", "sapphire", "emerald", "amethyst", "topaz"].map((symbolId) => {
+            const symbol = VIDEO_SYMBOLS.find(s => s.id === symbolId)!;
+            const payout = PAYTABLE[symbolId as keyof typeof PAYTABLE];
+            
+            return (
+              <div
+                key={symbolId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "clamp(8px, 1vw, 14px)",
+                  padding: "clamp(6px, 0.8vw, 10px) 0",
+                  borderBottom: "1px solid rgba(212,168,67,0.08)",
+                }}
+              >
+                <img
+                  src={symbol.path}
+                  alt={symbolId}
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    objectFit: "contain",
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: 500,
+                    fontSize: "clamp(11px, 1.2vw, 14px)",
+                    color: symbol.color,
+                    minWidth: "clamp(60px, 8vw, 90px)",
+                  }}
+                >
+                  {payout.name[lang]}
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "clamp(6px, 1vw, 12px)",
+                    flexWrap: "wrap",
+                    flex: 1,
+                  }}
+                >
+                  {Object.entries(payout.payouts).map(([count, multi]) => (
+                    <span
+                      key={count}
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "clamp(9px, 1vw, 12px)",
+                        color: "rgba(255,255,255,0.7)",
+                      }}
+                    >
+                      {count}+ = x{multi}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* SPECIAL Section */}
+        <div>
+          <h3
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 600,
+              fontSize: "clamp(12px, 1.4vw, 16px)",
+              color: "#00E676",
+              textTransform: "uppercase",
+              letterSpacing: "2px",
+              marginBottom: "clamp(8px, 1vw, 12px)",
+              borderBottom: "1px solid rgba(0,230,118,0.2)",
+              paddingBottom: "clamp(4px, 0.5vw, 8px)",
+            }}
+          >
+            {t("specialSymbols")}
+          </h3>
+          
+          {/* Scatter */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "clamp(8px, 1vw, 14px)",
+              padding: "clamp(6px, 0.8vw, 10px) 0",
+              borderBottom: "1px solid rgba(212,168,67,0.08)",
+            }}
+          >
+            <img
+              src="/assets/games/slots/symbols/scatter.png"
+              alt="Scatter"
+              style={{
+                width: "48px",
+                height: "48px",
+                objectFit: "contain",
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 500,
+                  fontSize: "clamp(11px, 1.2vw, 14px)",
+                  color: "#FFD700",
+                  display: "block",
+                }}
+              >
+                Scatter
+              </span>
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "clamp(9px, 1vw, 11px)",
+                  color: "rgba(255,255,255,0.5)",
+                }}
+              >
+                {t("triggersFs")}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "clamp(6px, 1vw, 12px)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "clamp(9px, 1vw, 12px)",
+                  color: "#00E676",
+                }}
+              >
+                4+ = 10FS
+              </span>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "clamp(9px, 1vw, 12px)",
+                  color: "#00E676",
+                }}
+              >
+                5+ = 15FS
+              </span>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "clamp(9px, 1vw, 12px)",
+                  color: "#00E676",
+                }}
+              >
+                6+ = 20FS
+              </span>
+            </div>
+          </div>
+          
+          {/* Multiplier Orb */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "clamp(8px, 1vw, 14px)",
+              padding: "clamp(6px, 0.8vw, 10px) 0",
+            }}
+          >
+            <img
+              src="/assets/games/slots/symbols/multiplier_orb.png"
+              alt="Multiplier Orb"
+              style={{
+                width: "48px",
+                height: "48px",
+                objectFit: "contain",
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 500,
+                  fontSize: "clamp(11px, 1.2vw, 14px)",
+                  color: "#FFD700",
+                  display: "block",
+                }}
+              >
+                Multiplier Orb
+              </span>
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "clamp(9px, 1vw, 11px)",
+                  color: "rgba(255,255,255,0.5)",
+                }}
+              >
+                {t("multipliesWin")}
+              </span>
+            </div>
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "clamp(10px, 1.1vw, 13px)",
+                color: "#FFD700",
+              }}
+            >
+              x2, x3, x5, x10
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+
+  // ==========================================================================
+  // TELA 9 — HISTORY + PROVABLY FAIR MODAL
+  // ==========================================================================
+  
+  const renderHistoryModal = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setShowHistory(false)}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 90,
+        background: "rgba(0,0,0,0.7)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "clamp(320px, 70vw, 700px)",
+          maxHeight: "80vh",
+          overflowY: "auto",
+          background: "linear-gradient(180deg, rgba(26,26,46,0.98), rgba(10,10,10,0.99))",
+          border: "1px solid rgba(212,168,67,0.4)",
+          borderRadius: "18px",
+          padding: "clamp(16px, 3vw, 32px)",
+          boxShadow: "0 0 60px rgba(212,168,67,0.1)",
+          position: "relative",
+        }}
+      >
+        {/* Close Button */}
+        <motion.button
+          onClick={() => setShowHistory(false)}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          style={{
+            position: "absolute",
+            top: "clamp(8px, 1.5vw, 16px)",
+            right: "clamp(8px, 1.5vw, 16px)",
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(212,168,67,0.3)",
+            color: "#D4A843",
+            fontSize: "18px",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          X
+        </motion.button>
+        
+        {/* Tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: "clamp(8px, 1vw, 16px)",
+            marginBottom: "clamp(16px, 2vw, 24px)",
+            borderBottom: "1px solid rgba(212,168,67,0.2)",
+            paddingBottom: "clamp(8px, 1vw, 12px)",
+          }}
+        >
+          <motion.button
+            onClick={() => setHistoryTab("history")}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              padding: "clamp(6px, 0.8vw, 10px) clamp(12px, 1.5vw, 20px)",
+              background: historyTab === "history" ? "rgba(212,168,67,0.15)" : "transparent",
+              border: historyTab === "history" ? "1px solid rgba(212,168,67,0.4)" : "1px solid transparent",
+              borderRadius: "8px",
+              color: historyTab === "history" ? "#D4A843" : "#A8A8A8",
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 600,
+              fontSize: "clamp(11px, 1.3vw, 15px)",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              cursor: "pointer",
+            }}
+          >
+            {t("history")}
+          </motion.button>
+          <motion.button
+            onClick={() => setHistoryTab("provablyFair")}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              padding: "clamp(6px, 0.8vw, 10px) clamp(12px, 1.5vw, 20px)",
+              background: historyTab === "provablyFair" ? "rgba(212,168,67,0.15)" : "transparent",
+              border: historyTab === "provablyFair" ? "1px solid rgba(212,168,67,0.4)" : "1px solid transparent",
+              borderRadius: "8px",
+              color: historyTab === "provablyFair" ? "#D4A843" : "#A8A8A8",
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 600,
+              fontSize: "clamp(11px, 1.3vw, 15px)",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              cursor: "pointer",
+            }}
+          >
+            {t("provablyFair")}
+          </motion.button>
+        </div>
+        
+        {/* History Tab */}
+        {historyTab === "history" && (
+          <div>
+            {MOCK_HISTORY.length === 0 ? (
+              <p
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "clamp(12px, 1.4vw, 16px)",
+                  color: "rgba(255,255,255,0.5)",
+                  textAlign: "center",
+                  padding: "clamp(16px, 2vw, 32px)",
+                }}
+              >
+                {t("noHistory")}
+              </p>
+            ) : (
+              <>
+                {/* Header */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "clamp(6px, 0.8vw, 10px) clamp(8px, 1vw, 12px)",
+                    borderBottom: "1px solid rgba(212,168,67,0.2)",
+                    fontFamily: "'Cinzel', serif",
+                    fontWeight: 600,
+                    fontSize: "clamp(9px, 1vw, 11px)",
+                    color: "#A8A8A8",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  <span style={{ flex: 1 }}>Time</span>
+                  <span style={{ flex: 1, textAlign: "center" }}>{t("bet")}</span>
+                  <span style={{ flex: 1, textAlign: "center" }}>{t("win")}</span>
+                  <span style={{ flex: 1, textAlign: "right" }}>Multi</span>
+                </div>
+                
+                {/* Rows */}
+                {MOCK_HISTORY.map((row) => (
+                  <div
+                    key={row.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "clamp(8px, 1vw, 12px)",
+                      borderBottom: "1px solid rgba(212,168,67,0.1)",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "clamp(11px, 1.2vw, 14px)",
+                    }}
+                  >
+                    <span style={{ flex: 1, color: "rgba(255,255,255,0.5)" }}>{row.time}</span>
+                    <span style={{ flex: 1, textAlign: "center", color: "#FFFFFF" }}>{row.bet} GC</span>
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "center",
+                        color: row.win > 0 ? "#00E676" : "#FF4444",
+                      }}
+                    >
+                      {row.win > 0 ? `+${row.win}` : "0"} GC
+                    </span>
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "right",
+                        color: row.win > 0 ? "#00E676" : "rgba(255,255,255,0.3)",
+                      }}
+                    >
+                      {row.multi}
+                    </span>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+        
+        {/* Provably Fair Tab */}
+        {historyTab === "provablyFair" && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "clamp(12px, 1.5vw, 20px)",
+            }}
+          >
+            {/* Icon */}
+            <div style={{ textAlign: "center" }}>
+              <img
+                src={ASSETS.iconProvablyFair}
+                alt="Provably Fair"
+                style={{
+                  width: "clamp(40px, 5vw, 64px)",
+                  height: "clamp(40px, 5vw, 64px)",
+                  opacity: 0.8,
+                }}
+              />
+            </div>
+            
+            {/* Server Seed Hash */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontFamily: "'Cinzel', serif",
+                  fontWeight: 600,
+                  fontSize: "clamp(10px, 1.1vw, 13px)",
+                  color: "#D4A843",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  marginBottom: "clamp(4px, 0.5vw, 8px)",
+                }}
+              >
+                {t("serverSeedHash")}
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "clamp(6px, 0.8vw, 10px)",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    background: "rgba(26,26,46,0.6)",
+                    border: "1px solid rgba(212,168,67,0.3)",
+                    borderRadius: "10px",
+                    padding: "clamp(8px, 1vw, 14px)",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "clamp(9px, 1vw, 12px)",
+                    color: "#FFFFFF",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {serverSeedHash}
+                </div>
+                <motion.button
+                  onClick={handleCopyHash}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "8px",
+                    background: copiedSeed ? "rgba(0,230,118,0.2)" : "rgba(255,255,255,0.05)",
+                    border: copiedSeed ? "1px solid rgba(0,230,118,0.4)" : "1px solid rgba(212,168,67,0.3)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {copiedSeed ? (
+                    <span style={{ color: "#00E676", fontSize: "14px" }}>✓</span>
+                  ) : (
+                    <img
+                      src={ASSETS.iconCopy}
+                      alt="Copy"
+                      style={{ width: "18px", height: "18px", opacity: 0.7 }}
+                    />
+                  )}
+                </motion.button>
+              </div>
+            </div>
+            
+            {/* Client Seed */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontFamily: "'Cinzel', serif",
+                  fontWeight: 600,
+                  fontSize: "clamp(10px, 1.1vw, 13px)",
+                  color: "#D4A843",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  marginBottom: "clamp(4px, 0.5vw, 8px)",
+                }}
+              >
+                {t("clientSeed")}
+              </label>
+              <input
+                type="text"
+                value={clientSeed}
+                onChange={(e) => setClientSeed(e.target.value)}
+                style={{
+                  width: "100%",
+                  background: "rgba(26,26,46,0.6)",
+                  border: "1px solid rgba(212,168,67,0.3)",
+                  borderRadius: "10px",
+                  padding: "clamp(8px, 1vw, 14px)",
+                  color: "#FFFFFF",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "clamp(11px, 1.2vw, 14px)",
+                  outline: "none",
+                }}
+              />
+            </div>
+            
+            {/* Nonce */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontFamily: "'Cinzel', serif",
+                  fontWeight: 600,
+                  fontSize: "clamp(10px, 1.1vw, 13px)",
+                  color: "#D4A843",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  marginBottom: "clamp(4px, 0.5vw, 8px)",
+                }}
+              >
+                {t("nonce")}
+              </label>
+              <div
+                style={{
+                  background: "rgba(26,26,46,0.6)",
+                  border: "1px solid rgba(212,168,67,0.3)",
+                  borderRadius: "10px",
+                  padding: "clamp(8px, 1vw, 14px)",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "clamp(11px, 1.2vw, 14px)",
+                  color: "#FFFFFF",
+                }}
+              >
+                {nonce}
+              </div>
+            </div>
+            
+            {/* Verify Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                padding: "clamp(10px, 1.2vw, 14px) clamp(20px, 2.5vw, 32px)",
+                background: "linear-gradient(180deg, #00C853 0%, #004D25 100%)",
+                border: "1.5px solid rgba(0,230,118,0.3)",
+                borderRadius: "10px",
+                color: "#FFFFFF",
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 700,
+                fontSize: "clamp(12px, 1.4vw, 16px)",
+                textTransform: "uppercase",
+                letterSpacing: "2px",
+                cursor: "pointer",
+                alignSelf: "center",
+              }}
+            >
+              {t("verify")}
+            </motion.button>
+            
+            {/* Description */}
+            <p
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 400,
+                fontSize: "clamp(10px, 1.1vw, 13px)",
+                color: "rgba(255,255,255,0.5)",
+                textAlign: "center",
+                lineHeight: 1.5,
+              }}
+            >
+              {t("provablyFairDesc")}
+            </p>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+
+  // ==========================================================================
+  // TELA 10 — BUY BONUS MODAL
+  // ==========================================================================
+  
+  const renderBuyBonusModal = () => {
+    const cost = bet * 100;
+    const canAfford = cost <= saldo;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setShowBuyBonus(false)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 90,
+          background: "rgba(0,0,0,0.7)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.8, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "linear-gradient(135deg, rgba(26,26,46,0.95), rgba(10,10,10,0.98))",
+            border: "1px solid rgba(212,168,67,0.5)",
+            borderRadius: "18px",
+            padding: "clamp(24px, 4vw, 48px)",
+            textAlign: "center",
+            boxShadow: "0 0 80px rgba(212,168,67,0.15)",
+            maxWidth: "clamp(280px, 50vw, 420px)",
+          }}
+        >
+          {/* Scatter Icon */}
+          <img
+            src="/assets/games/slots/symbols/scatter.png"
+            alt="Free Spins"
+            style={{
+              width: "64px",
+              height: "64px",
+              marginBottom: "clamp(12px, 1.5vw, 20px)",
+            }}
+          />
+          
+          {/* Title */}
+          <h2
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 700,
+              fontSize: "clamp(16px, 2.2vw, 24px)",
+              color: "#D4A843",
+              textTransform: "uppercase",
+              letterSpacing: "2px",
+              marginBottom: "clamp(6px, 0.8vw, 10px)",
+              textShadow: "0 0 15px rgba(212,168,67,0.4)",
+            }}
+          >
+            {t("buyFreeSpins")}
+          </h2>
+          
+          {/* Subtitle */}
+          <p
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 400,
+              fontSize: "clamp(11px, 1.3vw, 15px)",
+              color: "rgba(255,255,255,0.7)",
+              marginBottom: "clamp(16px, 2vw, 24px)",
+            }}
+          >
+            {t("guaranteedSpins")}
+          </p>
+          
+          {/* Cost */}
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700,
+              fontSize: "clamp(18px, 2.5vw, 28px)",
+              color: "#FFD700",
+              textShadow: "0 0 12px rgba(255,215,0,0.4)",
+              marginBottom: "clamp(6px, 0.8vw, 10px)",
+            }}
+          >
+            {t("cost")}: {cost.toLocaleString("pt-BR")} GC
+          </div>
+          
+          {/* Current Balance */}
+          <p
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 400,
+              fontSize: "clamp(10px, 1.2vw, 14px)",
+              color: "rgba(255,255,255,0.5)",
+              marginBottom: "clamp(20px, 2.5vw, 32px)",
+            }}
+          >
+            {t("currentBalance")}: {saldo.toLocaleString("pt-BR")} GC
+          </p>
+          
+          {/* Buttons */}
+          <div
+            style={{
+              display: "flex",
+              gap: "clamp(10px, 1.2vw, 16px)",
+              justifyContent: "center",
+            }}
+          >
+            {/* Cancel */}
+            <motion.button
+              onClick={() => setShowBuyBonus(false)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                padding: "clamp(10px, 1.2vw, 14px) clamp(20px, 2.5vw, 32px)",
+                background: "transparent",
+                border: "1.5px solid rgba(212,168,67,0.4)",
+                borderRadius: "10px",
+                color: "#D4A843",
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 600,
+                fontSize: "clamp(11px, 1.3vw, 15px)",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                cursor: "pointer",
+                minHeight: "44px",
+              }}
+            >
+              {t("cancel")}
+            </motion.button>
+            
+            {/* Confirm */}
+            <motion.button
+              onClick={handleBuyBonus}
+              disabled={!canAfford}
+              whileHover={canAfford ? { scale: 1.05 } : {}}
+              whileTap={canAfford ? { scale: 0.95 } : {}}
+              style={{
+                padding: "clamp(10px, 1.2vw, 14px) clamp(20px, 2.5vw, 32px)",
+                background: canAfford
+                  ? "linear-gradient(180deg, #00C853 0%, #004D25 100%)"
+                  : "rgba(128,128,128,0.3)",
+                border: canAfford
+                  ? "1.5px solid rgba(0,230,118,0.3)"
+                  : "1.5px solid rgba(128,128,128,0.3)",
+                borderRadius: "10px",
+                color: canAfford ? "#FFFFFF" : "rgba(255,255,255,0.3)",
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 700,
+                fontSize: "clamp(11px, 1.3vw, 15px)",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                cursor: canAfford ? "pointer" : "not-allowed",
+                minHeight: "44px",
+              }}
+            >
+              {t("confirm")}
+            </motion.button>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // ==========================================================================
   // MAIN RENDER
   // ==========================================================================
   
@@ -2589,6 +3633,21 @@ export default function SlotsGame({
       {/* Win Overlay */}
       <AnimatePresence>
         {screen === "winOverlay" && renderWinOverlay()}
+      </AnimatePresence>
+      
+      {/* Paytable Modal */}
+      <AnimatePresence>
+        {showPaytable && renderPaytableModal()}
+      </AnimatePresence>
+      
+      {/* History Modal */}
+      <AnimatePresence>
+        {showHistory && renderHistoryModal()}
+      </AnimatePresence>
+      
+      {/* Buy Bonus Modal */}
+      <AnimatePresence>
+        {showBuyBonus && renderBuyBonusModal()}
       </AnimatePresence>
     </motion.div>
   );
