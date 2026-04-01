@@ -16,6 +16,7 @@ import CasinoLogo from "./CasinoLogo";
 import { useRipple } from "@/hooks/use-ripple";
 import { useSoundManager } from "@/hooks/use-sound-manager";
 import { useGameAPI } from "@/hooks/use-game-api";
+import { CrashGame } from "@/components/games/crash";
 
 export default function BlackoutCasino() {
   const { lang, setLang, activeTab, setActiveTab, selectedGame, setSelectedGame, activeGame, setActiveGame, saldo } = useCasino();
@@ -385,7 +386,21 @@ export default function BlackoutCasino() {
               )}
             </AnimatePresence>
 
-            {/* JOGO ATIVO — renderiza dentro do painel */}
+            {/* JOGO ATIVO — renderiza DENTRO do painel, cobrindo tudo */}
+            <AnimatePresence mode="wait">
+              {activeGame === "crash" && (
+                <CrashGame
+                  key="crash"
+                  onBack={() => setActiveGame(null)}
+                />
+              )}
+              {activeGame && activeGame !== "crash" && (
+                <ComingSoon
+                  key={activeGame}
+                  onBack={() => setActiveGame(null)}
+                />
+              )}
+            </AnimatePresence>
 
             {/* Light leak — cor muda por atmosfera */}
             <div
@@ -417,16 +432,6 @@ export default function BlackoutCasino() {
               }}
             />
           </motion.div>
-
-          {/* JOGO ATIVO — ComingSoon como fallback para jogos sem componente */}
-          <AnimatePresence mode="wait">
-            {activeGame && (
-              <ComingSoon
-                key={activeGame}
-                onBack={() => setActiveGame(null)}
-              />
-            )}
-          </AnimatePresence>
 
           {/* DEPOSITO — modal de depositar/sacar GCoin */}
           <AnimatePresence>
