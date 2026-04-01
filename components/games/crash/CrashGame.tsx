@@ -8,6 +8,8 @@ import { CrashCanvas } from "./CrashCanvas";
 import { CrashControls } from "./CrashControls";
 import { CrashHistory } from "./CrashHistory";
 import { CrashBetFeed } from "./CrashBetFeed";
+import { CrashProvablyFair } from "./CrashProvablyFair";
+import { CrashHistoryPanel } from "./CrashHistoryPanel";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CRASH GAME — Blackout Casino
@@ -99,6 +101,14 @@ export default function CrashGame({ onBack }: { onBack: () => void }) {
   
   // Som
   const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // Modais
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [selectedRound, setSelectedRound] = useState<CrashRound | null>(null);
+  
+  // Resultados do jogador por round
+  const [playerResults] = useState<Map<string, { status: "won" | "lost" | "none"; amount: number; cashoutMultiplier?: number }>>(new Map());
   
   // Refs para animacao
   const animationRef = useRef<number>(0);
@@ -425,8 +435,65 @@ export default function CrashGame({ onBack }: { onBack: () => void }) {
           />
         </div>
 
-        {/* Saldo + Som */}
+        {/* Saldo + Botoes */}
         <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 1vw, 16px)" }}>
+          {/* Botao Historico */}
+          <motion.button
+            onClick={() => setShowHistoryPanel(true)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            style={{
+              width: "clamp(32px, 3vw, 44px)",
+              height: "clamp(32px, 3vw, 44px)",
+              borderRadius: "50%",
+              background: "rgba(10,10,10,0.8)",
+              border: "1px solid rgba(212,168,67,0.4)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
+            title={lang === "br" ? "Histórico" : "History"}
+          >
+            <img
+              src={ASSETS.iconHistory}
+              alt="Histórico"
+              style={{ width: "60%", height: "60%" }}
+            />
+          </motion.button>
+
+          {/* Botao Provably Fair */}
+          <motion.button
+            onClick={() => {
+              if (history.length > 0) {
+                setSelectedRound(history[0]);
+                setShowProvablyFair(true);
+              }
+            }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            style={{
+              width: "clamp(32px, 3vw, 44px)",
+              height: "clamp(32px, 3vw, 44px)",
+              borderRadius: "50%",
+              background: "rgba(10,10,10,0.8)",
+              border: "1px solid rgba(212,168,67,0.4)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
+            title="Provably Fair"
+          >
+            <img
+              src={ASSETS.iconProvablyFair}
+              alt="Provably Fair"
+              style={{ width: "60%", height: "60%" }}
+            />
+          </motion.button>
+
           {/* Toggle Som */}
           <motion.button
             onClick={() => {
@@ -685,6 +752,38 @@ export default function CrashGame({ onBack }: { onBack: () => void }) {
           <CrashBetFeed bets={bets} lang={lang} />
         </div>
       </main>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          MODAIS
+          ═══════════════════════════════════════════════════════════════════ */}
+      
+      {/* History Panel (Drawer) */}
+      <AnimatePresence>
+        {showHistoryPanel && (
+          <CrashHistoryPanel
+            history={history}
+            playerResults={playerResults}
+            onClose={() => setShowHistoryPanel(false)}
+            onOpenPF={(round) => {
+              setSelectedRound(round);
+              setShowProvablyFair(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Provably Fair Modal */}
+      <AnimatePresence>
+        {showProvablyFair && selectedRound && (
+          <CrashProvablyFair
+            round={selectedRound}
+            onClose={() => {
+              setShowProvablyFair(false);
+              setSelectedRound(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
