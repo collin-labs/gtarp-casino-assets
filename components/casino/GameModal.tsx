@@ -143,10 +143,11 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
   return (
     <motion.div
       ref={containerRef}
-      initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-      animate={{ opacity: 1, backdropFilter: "blur(6px)" }}
-      exit={{ opacity: 0, backdropFilter: "blur(0px)", transition: { duration: 0.35, ease: "easeIn" } }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.35, ease: "easeIn" } }}
       transition={{ duration: 0.4, ease: "easeOut" }}
+      className="panel-noise"
       style={{
         position: "absolute",
         inset: 0,
@@ -158,7 +159,7 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
         overflow: "hidden",
         borderRadius: "inherit",
         fontFamily: "var(--font-cinzel)",
-        background: "#000",
+        background: "linear-gradient(180deg, #030305 0%, #000 40%, #020204 100%)",
       }}
     >
       {/* Fundo escuro com gradiente radial verde/ouro */}
@@ -172,6 +173,18 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
           background:
             "radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,50,25,0.6) 0%, rgba(0,0,0,0.95) 70%, #000 100%)",
           zIndex: 0,
+        }}
+      />
+
+      {/* Vignette nas bordas — profundidade cinematografica */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "radial-gradient(ellipse 75% 65% at 50% 45%, transparent 40%, rgba(0,0,0,0.6) 100%)",
+          pointerEvents: "none",
+          zIndex: 3,
         }}
       />
 
@@ -334,6 +347,7 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
           whileHover={{ scale: 1.06, filter: "brightness(1.15)" }}
           whileTap={{ scale: 0.96 }}
           onClick={onPlay}
+          aria-label={isBR ? "Jogar agora" : "Play now"}
           style={{
             position: "relative",
             border: "none",

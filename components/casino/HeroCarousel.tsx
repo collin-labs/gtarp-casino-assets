@@ -179,6 +179,7 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
               onMouseDown={() => setBtnPressed(true)}
               onMouseUp={() => { setBtnPressed(false); onGameSelect?.(current); }}
               onMouseLeave={() => setBtnPressed(false)}
+              aria-label={isBR ? `Jogar ${current.labelBR}` : `Play ${current.labelEN}`}
               style={{
                 position: "relative",
                 border: "none",
@@ -251,6 +252,7 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
                 key={i}
                 onClick={() => goTo(i)}
                 whileHover={{ scale: 1.3 }}
+                aria-label={isBR ? `Jogo ${i + 1}` : `Game ${i + 1}`}
                 style={{
                   padding: 0,
                   cursor: "pointer",

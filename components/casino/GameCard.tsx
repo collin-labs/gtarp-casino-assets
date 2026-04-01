@@ -69,10 +69,14 @@ export default function GameCard({ game, isBR, onClick, feixoColor = "green", sh
   return (
     <motion.div
       ref={cardRef}
+      role="button"
+      tabIndex={0}
+      aria-label={isBR ? game.labelBR : game.labelEN}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
       onMouseMove={handleMouseMove}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
       whileHover={{ y: -6, scale: 1.04 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}

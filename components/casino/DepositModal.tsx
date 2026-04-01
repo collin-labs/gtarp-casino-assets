@@ -119,6 +119,7 @@ export default function DepositModal({ onClose }: DepositModalProps) {
         <motion.button
           whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
           onClick={onClose}
+          aria-label={t.fechar}
           title={t.fechar}
           style={{
             position: "absolute", top: 12, right: 14,

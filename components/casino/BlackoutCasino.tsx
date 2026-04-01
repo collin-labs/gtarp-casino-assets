@@ -284,6 +284,7 @@ export default function BlackoutCasino() {
                   }}
                   whileTap={{ scale: 0.95 }}
                   className="cursor-pointer p-0 bg-transparent border-none"
+                  aria-label={key === "br" ? "Mudar para Português" : "Switch to English"}
                   title={key === "br" ? "Português" : "English"}
                   style={{
                     width: "clamp(22px, 2vw, 32px)",
@@ -321,6 +322,7 @@ export default function BlackoutCasino() {
               }}
               whileTap={{ scale: 0.95 }}
               onClick={() => { sound.play("click"); setShowDeposit(true); }}
+              aria-label={lang === "br" ? `Saldo: ${saldo} GCoin. Clique para depositar ou sacar` : `Balance: ${saldo} GCoin. Click to deposit or withdraw`}
               title={lang === "br" ? "Depositar ou sacar GCoin" : "Deposit or withdraw GCoin"}
               className="bg-transparent p-0"
               style={{

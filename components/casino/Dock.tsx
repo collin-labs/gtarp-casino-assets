@@ -36,6 +36,8 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
       {/* 5 tabs sobrepostos no PNG */}
       <LayoutGroup id="dock-tabs">
       <div
+        role="tablist"
+        aria-label={isBR ? "Categorias do cassino" : "Casino categories"}
         style={{
           position: "absolute",
           top: "50%",
@@ -50,6 +52,9 @@ export default function Dock({ lang, activeTab, setActiveTab }: DockProps) {
         {tabs.map((tab, i) => (
           <motion.button
             key={i}
+            role="tab"
+            aria-selected={i === activeTab}
+            aria-label={tooltips[i]}
             onClick={() => setActiveTab(i)}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}

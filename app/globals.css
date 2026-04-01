@@ -93,17 +93,19 @@
   animation: ctaPulse 2.5s ease-in-out infinite !important;
 }
 
-/* Noise texture cinematografico sobre o painel */
+/* Noise texture cinematografico sobre o painel
+   soft-light funciona em fundos escuros (overlay eh invisivel: 2*base*blend ≈ 0)
+   baseFrequency 0.45 gera grao mais grosso = mais visivel em escala reduzida */
 .panel-noise::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
-  background-size: 200px;
-  opacity: 0.08;
-  mix-blend-mode: overlay;
+  background-size: 180px;
+  opacity: 0.14;
+  mix-blend-mode: soft-light;
   pointer-events: none;
   z-index: 10;
 }
@@ -420,11 +422,40 @@ html, body, #__next {
 *:hover > * > * > .case-card-img-semi,
 *:hover > * > .case-card-img-semi { opacity: 1 !important; transform: scale(1.05) !important; }
 
-/* ─── Cases: partículas subindo nos cards ─── */
+/* ─── Cases: particulas subindo nos cards ─── */
 @keyframes caseParticleRise {
   0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
   10%  { opacity: 1; }
   50%  { transform: translateY(-120%) translateX(6px) scale(0.85); opacity: 0.8; }
   90%  { opacity: 0.2; }
   100% { transform: translateY(-240%) translateX(-4px) scale(0.5); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════
+   FASE 8.2 — Acessibilidade
+   ═══════════════════════════════════════════════════ */
+
+/* Focus ring dourada visivel so com teclado */
+*:focus-visible {
+  outline: 2px solid var(--gold-mid);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Desligar TODAS as animacoes se o usuario pediu */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-marquee {
+    animation: none !important;
+  }
+
+  .panel-noise::before {
+    opacity: 0.06;
+  }
 }
