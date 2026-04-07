@@ -475,70 +475,47 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
     grid: {
       display: "grid",
       gridTemplateColumns: "repeat(5, 1fr)",
-      gap: "clamp(3px, 0.4vw, 6px)",
-      flex: "0 0 clamp(250px, 55%, 500px)",
+      gap: "clamp(4px, 0.5vw, 8px)",
+      flex: "0 0 clamp(280px, 58%, 560px)",
       alignContent: "start",
+      alignSelf: "center",
     },
     card: {
       position: "relative" as const,
       display: "flex",
-      flexDirection: "column" as const,
       alignItems: "center",
       justifyContent: "center",
-      padding: "clamp(2px, 0.3vw, 6px)",
-      minHeight: "clamp(44px, 8vw, 80px)",
-      background: "rgba(5,5,5,0.95)",
-      border: "1.5px solid rgba(212,168,67,0.2)",
-      borderRadius: "8px",
+      padding: 0,
+      background: "transparent",
+      border: "none",
+      borderRadius: "clamp(6px, 0.8vw, 10px)",
       cursor: "pointer",
       overflow: "hidden",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
       transition: "all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
     },
     cardSelected: {
-      border: "2px solid #00E676",
-      boxShadow: "0 0 15px rgba(0,230,118,0.4), 0 0 30px rgba(0,230,118,0.15)",
+      boxShadow: "0 0 20px rgba(0,230,118,0.5), 0 0 40px rgba(0,230,118,0.2)",
+      filter: "brightness(1.15)",
     },
     cardDisabled: {
-      opacity: 0.4,
-      filter: "grayscale(0.5)",
+      opacity: 0.35,
+      filter: "grayscale(0.6) brightness(0.7)",
       cursor: "not-allowed",
     },
     cardImg: {
-      width: "clamp(24px, 4vw, 48px)",
+      width: "100%",
       height: "auto",
       objectFit: "contain" as const,
       pointerEvents: "none" as const,
       userSelect: "none" as const,
-    },
-    cardName: {
-      fontFamily: "'Inter', sans-serif",
-      fontWeight: 600,
-      fontSize: "clamp(7px, 0.9vw, 11px)",
-      color: "#D4A843",
-      textAlign: "center" as const,
-      marginTop: "2px",
-      whiteSpace: "nowrap" as const,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      maxWidth: "100%",
-    },
-    cardGrupo: {
-      position: "absolute" as const,
-      top: "2px",
-      right: "4px",
-      fontFamily: "'JetBrains Mono', monospace",
-      fontWeight: 700,
-      fontSize: "clamp(7px, 0.8vw, 10px)",
-      color: "rgba(212,168,67,0.4)",
-      lineHeight: 1,
+      borderRadius: "clamp(6px, 0.8vw, 10px)",
     },
     cardBadge: {
       position: "absolute" as const,
-      top: "-6px",
-      right: "-6px",
-      width: "20px",
-      height: "20px",
+      top: "4px",
+      right: "4px",
+      width: "clamp(18px, 2.5vw, 26px)",
+      height: "clamp(18px, 2.5vw, 26px)",
       borderRadius: "50%",
       background: "#00E676",
       color: "#000",
@@ -1331,20 +1308,18 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
                   initial={{ opacity: 0, y: 15, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: index * 0.03, duration: 0.3, ease: [0, 0, 0.2, 1] }}
-                  whileHover={!isDisabled ? { scale: 1.05, borderColor: "rgba(212,168,67,0.5)" } : {}}
-                  whileTap={!isDisabled ? { scale: 0.97 } : {}}
+                  whileHover={!isDisabled ? { scale: 1.06, filter: "brightness(1.1)" } : {}}
+                  whileTap={!isDisabled ? { scale: 0.95 } : {}}
                   onClick={() => !isDisabled && handleSelectAnimal(animal.id)}
                   title={tooltip}
                 >
-                  <span style={styles.cardGrupo}>{animal.id.toString().padStart(2, "0")}</span>
                   <img src={ASSETS.getAnimal(animal.id)} alt={animal.name[lang]} style={styles.cardImg} />
-                  <span style={styles.cardName}>{animal.name[lang]}</span>
                   {isSelected && (
                     <motion.span
                       style={styles.cardBadge}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 20 }}
                     >
                       {selectionIndex + 1}
                     </motion.span>
