@@ -529,154 +529,184 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
       zIndex: 2,
     },
     panel: {
-      flex: "0 0 clamp(200px, 38%, 350px)",
+      flex: "0 0 clamp(220px, 36%, 340px)",
       display: "flex",
       flexDirection: "column" as const,
-      gap: "clamp(6px, 0.8vw, 12px)",
-      padding: "clamp(6px, 0.8vw, 12px)",
-      background: "rgba(5,5,5,0.85)",
-      border: "1px solid rgba(212,168,67,0.1)",
-      borderRadius: "10px",
-      backdropFilter: "blur(2px)",
+      gap: "clamp(10px, 1.2vw, 18px)",
+      padding: "clamp(12px, 1.5vw, 20px)",
+      background: "linear-gradient(145deg, rgba(15,12,8,0.95) 0%, rgba(8,6,4,0.98) 100%)",
+      border: "1px solid rgba(212,168,67,0.15)",
+      borderRadius: "12px",
+      boxShadow: "inset 0 1px 0 rgba(255,215,0,0.05), 0 8px 32px rgba(0,0,0,0.5)",
       overflowY: "auto" as const,
+    },
+    panelSection: {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "clamp(6px, 0.8vw, 10px)",
+    },
+    panelSectionLabel: {
+      fontFamily: "'Cinzel', serif",
+      fontWeight: 600,
+      fontSize: "clamp(9px, 1vw, 11px)",
+      color: "rgba(212,168,67,0.5)",
+      textTransform: "uppercase" as const,
+      letterSpacing: "1.5px",
+      paddingBottom: "4px",
+      borderBottom: "1px solid rgba(212,168,67,0.1)",
     },
     tabs: {
       display: "flex",
-      flexWrap: "wrap" as const,
-      gap: "clamp(3px, 0.4vw, 6px)",
-      justifyContent: "center",
+      gap: "2px",
+      background: "rgba(0,0,0,0.4)",
+      borderRadius: "8px",
+      padding: "3px",
     },
     tab: {
-      padding: "clamp(4px, 0.6vw, 8px) clamp(8px, 1.5vw, 16px)",
+      flex: 1,
+      padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
       borderRadius: "6px",
       border: "none",
       cursor: "pointer",
-      background: "rgba(0,0,0,0.3)",
+      background: "transparent",
       color: "rgba(212,168,67,0.4)",
-      borderBottom: "1px solid transparent",
-      fontFamily: "'Cinzel', serif",
-      fontWeight: 700,
-      fontSize: "clamp(8px, 1vw, 12px)",
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 600,
+      fontSize: "clamp(8px, 0.9vw, 11px)",
       textTransform: "uppercase" as const,
-      letterSpacing: "1px",
+      letterSpacing: "0.5px",
       minHeight: "44px",
       display: "flex",
       alignItems: "center",
-      transition: "all 0.2s ease",
+      justifyContent: "center",
+      transition: "all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
     },
     tabActive: {
-      background: "rgba(212,168,67,0.1)",
-      color: "#D4A843",
-      borderBottom: "2px solid #D4A843",
+      background: "linear-gradient(135deg, rgba(212,168,67,0.2) 0%, rgba(212,168,67,0.1) 100%)",
+      color: "#FFD700",
+      boxShadow: "0 2px 8px rgba(212,168,67,0.15), inset 0 1px 0 rgba(255,215,0,0.1)",
     },
     chips: {
       display: "flex",
-      gap: "clamp(4px, 0.5vw, 8px)",
+      gap: "clamp(6px, 0.8vw, 10px)",
       justifyContent: "center",
-      flexWrap: "wrap" as const,
     },
     chip: {
-      width: "clamp(36px, 5vw, 52px)",
-      height: "clamp(36px, 5vw, 52px)",
+      width: "clamp(40px, 5.5vw, 56px)",
+      height: "clamp(40px, 5.5vw, 56px)",
       borderRadius: "50%",
       cursor: "pointer",
-      border: "1.5px solid rgba(212,168,67,0.2)",
-      background: "rgba(10,10,10,0.9)",
+      border: "2px solid rgba(212,168,67,0.15)",
+      background: "linear-gradient(145deg, rgba(20,18,12,0.9) 0%, rgba(10,8,5,0.95) 100%)",
       color: "#00E676",
       fontFamily: "'JetBrains Mono', monospace",
       fontWeight: 700,
-      fontSize: "clamp(9px, 1.1vw, 13px)",
+      fontSize: "clamp(10px, 1.2vw, 14px)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      transition: "all 0.2s ease",
+      transition: "all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
     },
     chipActive: {
-      background: "rgba(20,18,5,0.95)",
+      background: "linear-gradient(145deg, rgba(40,35,15,0.95) 0%, rgba(25,22,10,0.98) 100%)",
       borderColor: "#FFD700",
       color: "#FFD700",
-      transform: "scale(1.1)",
-      boxShadow: "0 0 10px rgba(255,215,0,0.3)",
+      transform: "scale(1.12)",
+      boxShadow: "0 0 16px rgba(255,215,0,0.25), 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,215,0,0.15)",
     },
     payout: {
       display: "flex",
       flexDirection: "column" as const,
-      gap: "2px",
-      padding: "clamp(4px, 0.5vw, 8px)",
-      background: "rgba(0,0,0,0.3)",
-      borderRadius: "6px",
-      borderLeft: "2px solid rgba(255,215,0,0.3)",
+      gap: "4px",
+      padding: "clamp(8px, 1vw, 12px)",
+      background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.3) 100%)",
+      borderRadius: "8px",
+      border: "1px solid rgba(212,168,67,0.08)",
+      borderLeft: "3px solid rgba(255,215,0,0.4)",
     },
     payoutLine1: {
       fontFamily: "'JetBrains Mono', monospace",
-      fontWeight: 600,
-      fontSize: "clamp(9px, 1.1vw, 14px)",
+      fontWeight: 700,
+      fontSize: "clamp(11px, 1.3vw, 15px)",
       color: "#FFD700",
+      textShadow: "0 0 10px rgba(255,215,0,0.2)",
     },
     payoutLine2: {
       fontFamily: "'JetBrains Mono', monospace",
       fontWeight: 500,
-      fontSize: "clamp(8px, 0.9vw, 12px)",
+      fontSize: "clamp(9px, 1vw, 12px)",
       color: "rgba(212,168,67,0.5)",
     },
+    btnRow: {
+      display: "flex",
+      gap: "clamp(8px, 1vw, 12px)",
+      alignItems: "center",
+    },
     btnRandom: {
+      flex: "0 0 auto",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: "4px",
-      padding: "clamp(4px, 0.5vw, 8px) clamp(8px, 1.2vw, 16px)",
-      background: "rgba(212,168,67,0.08)",
+      gap: "6px",
+      padding: "clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 18px)",
+      background: "linear-gradient(135deg, rgba(212,168,67,0.1) 0%, rgba(212,168,67,0.05) 100%)",
       border: "1px solid rgba(212,168,67,0.2)",
-      borderRadius: "6px",
+      borderRadius: "8px",
       fontFamily: "'Inter', sans-serif",
       fontWeight: 600,
-      fontSize: "clamp(8px, 1vw, 12px)",
+      fontSize: "clamp(9px, 1vw, 12px)",
       color: "#D4A843",
       cursor: "pointer",
       minHeight: "44px",
+      transition: "all 0.2s ease",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
     },
     btnJogar: {
+      flex: 1,
       position: "relative" as const,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      minWidth: "clamp(120px, 18vw, 200px)",
-      minHeight: "clamp(36px, 5vw, 48px)",
-      backgroundImage: `url('${ASSETS.btnJogarAtivo}')`,
-      backgroundSize: "contain",
-      backgroundRepeat: "no-repeat",
-      backgroundPosition: "center",
+      minHeight: "clamp(44px, 6vw, 56px)",
+      background: "linear-gradient(135deg, #00E676 0%, #00C853 50%, #00A846 100%)",
       border: "none",
+      borderRadius: "10px",
       fontFamily: "'Cinzel', serif",
-      fontWeight: 900,
-      fontSize: "clamp(10px, 1.3vw, 16px)",
-      color: "#FFFFFF",
+      fontWeight: 800,
+      fontSize: "clamp(11px, 1.4vw, 16px)",
+      color: "#000000",
       textTransform: "uppercase" as const,
-      letterSpacing: "2px",
-      textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+      letterSpacing: "1.5px",
       cursor: "pointer",
+      boxShadow: "0 4px 16px rgba(0,230,118,0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
+      transition: "all 0.2s ease",
     },
     btnJogarDisabled: {
-      opacity: 0.4,
-      filter: "grayscale(0.5)",
+      background: "linear-gradient(135deg, rgba(60,60,60,0.6) 0%, rgba(40,40,40,0.7) 100%)",
+      color: "rgba(255,255,255,0.3)",
       cursor: "not-allowed",
-      backgroundImage: `url('${ASSETS.btnJogarDesativo}')`,
+      boxShadow: "none",
     },
     footerBtns: {
       display: "flex",
-      gap: "clamp(4px, 0.5vw, 8px)",
-      justifyContent: "flex-end",
+      gap: "clamp(6px, 0.8vw, 10px)",
+      justifyContent: "center",
+      paddingTop: "clamp(6px, 0.8vw, 10px)",
+      borderTop: "1px solid rgba(212,168,67,0.08)",
     },
     footerBtn: {
       width: "44px",
       height: "44px",
-      borderRadius: "6px",
-      background: "rgba(0,0,0,0.4)",
-      border: "1px solid rgba(212,168,67,0.15)",
+      borderRadius: "8px",
+      background: "linear-gradient(145deg, rgba(20,18,12,0.8) 0%, rgba(10,8,5,0.9) 100%)",
+      border: "1px solid rgba(212,168,67,0.12)",
       cursor: "pointer",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      transition: "all 0.2s ease",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
       transition: "all 0.2s ease",
     },
     footerBtnIcon: {
@@ -1331,84 +1361,133 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
 
           {/* PAINEL DE APOSTAS */}
           <div style={styles.panel}>
-            {/* TABS DE MODO */}
-            <div style={styles.tabs}>
-              {(Object.keys(MODE_CONFIG) as BetMode[]).map((mode) => (
-                <motion.button
-                  key={mode}
-                  style={{
-                    ...styles.tab,
-                    ...(betMode === mode ? styles.tabActive : {}),
-                  }}
-                  onClick={() => handleModeChange(mode)}
-                  whileTap={{ scale: 0.95 }}
-                  title={TEXTS.tooltips[mode][lang]}
-                >
-                  {TEXTS.modes[mode][lang]}
-                </motion.button>
-              ))}
+            {/* SECAO MODO DE APOSTA */}
+            <div style={styles.panelSection}>
+              <span style={styles.panelSectionLabel}>{lang === "br" ? "Modo" : "Mode"}</span>
+              <div style={styles.tabs}>
+                {(Object.keys(MODE_CONFIG) as BetMode[]).map((mode) => (
+                  <motion.button
+                    key={mode}
+                    style={{
+                      ...styles.tab,
+                      ...(betMode === mode ? styles.tabActive : {}),
+                    }}
+                    onClick={() => handleModeChange(mode)}
+                    whileTap={{ scale: 0.97 }}
+                    whileHover={betMode !== mode ? { background: "rgba(212,168,67,0.08)", color: "rgba(212,168,67,0.6)" } : {}}
+                    title={TEXTS.tooltips[mode][lang]}
+                  >
+                    {TEXTS.modes[mode][lang]}
+                  </motion.button>
+                ))}
+              </div>
             </div>
 
-            {/* CHIPS DE VALOR */}
-            <div style={styles.chips}>
-              {BET_CHIPS.map((chip) => (
-                <motion.button
-                  key={chip}
-                  style={{
-                    ...styles.chip,
-                    ...(betAmount === chip ? styles.chipActive : {}),
-                  }}
-                  onClick={() => setBetAmount(chip)}
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.95 }}
-                  title={`${lang === "br" ? "Apostar" : "Bet"} G$${chip}`}
-                >
-                  {chip >= 1000 ? `${chip / 1000}k` : chip}
-                </motion.button>
-              ))}
+            {/* SECAO VALOR DA APOSTA */}
+            <div style={styles.panelSection}>
+              <span style={styles.panelSectionLabel}>{lang === "br" ? "Valor" : "Amount"}</span>
+              <div style={styles.chips}>
+                {BET_CHIPS.map((chip) => (
+                  <motion.button
+                    key={chip}
+                    style={{
+                      ...styles.chip,
+                      ...(betAmount === chip ? styles.chipActive : {}),
+                    }}
+                    onClick={() => setBetAmount(chip)}
+                    whileHover={betAmount !== chip ? { scale: 1.08, borderColor: "rgba(212,168,67,0.35)" } : {}}
+                    whileTap={{ scale: 0.95 }}
+                    title={`${lang === "br" ? "Apostar" : "Bet"} G$${chip}`}
+                  >
+                    {chip >= 1000 ? `${chip / 1000}k` : chip}
+                  </motion.button>
+                ))}
+              </div>
             </div>
 
-            {/* PAYOUT DISPLAY */}
-            <div style={styles.payout}>
-              <span style={styles.payoutLine1}>
-                1o = {multipliers.first}x = G${formatBalance(potentialWin1)}
-              </span>
-              <span style={styles.payoutLine2}>
-                {lang === "br" ? "Outros" : "Others"} = {multipliers.others}x = G${formatBalance(potentialWinOthers)}
-              </span>
+            {/* SECAO GANHOS POTENCIAIS */}
+            <div style={styles.panelSection}>
+              <span style={styles.panelSectionLabel}>{lang === "br" ? "Ganhos" : "Winnings"}</span>
+              <div style={styles.payout}>
+                <span style={styles.payoutLine1}>
+                  1o = {multipliers.first}x = G${formatBalance(potentialWin1)}
+                </span>
+                <span style={styles.payoutLine2}>
+                  {lang === "br" ? "Outros" : "Others"} = {multipliers.others}x = G${formatBalance(potentialWinOthers)}
+                </span>
+              </div>
             </div>
 
-            {/* BOTAO ALEATORIO */}
-            <motion.button
-              style={styles.btnRandom}
-              onClick={handleRandomSelect}
-              whileTap={{ scale: 0.95 }}
-              title={TEXTS.tooltips.random[lang]}
-            >
-              <img src={ASSETS.iconRandom} alt="" style={{ width: "16px", height: "16px", opacity: 0.8 }} />
-              {TEXTS.random[lang]}
-            </motion.button>
+            {/* BOTOES ALEATORIO + JOGAR */}
+            <div style={styles.btnRow}>
+              <motion.button
+                style={styles.btnRandom}
+                onClick={handleRandomSelect}
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ borderColor: "rgba(212,168,67,0.4)", background: "rgba(212,168,67,0.15)" }}
+                title={TEXTS.tooltips.random[lang]}
+              >
+                <img src={ASSETS.iconRandom} alt="" style={{ width: "18px", height: "18px", opacity: 0.9 }} />
+              </motion.button>
+              <motion.button
+                style={{
+                  ...styles.btnJogar,
+                  ...(canPlay ? {} : styles.btnJogarDisabled),
+                }}
+                onClick={handlePlay}
+                whileHover={canPlay ? { scale: 1.03, boxShadow: "0 6px 24px rgba(0,230,118,0.4), inset 0 1px 0 rgba(255,255,255,0.25)" } : {}}
+                whileTap={canPlay ? { scale: 0.97 } : {}}
+                disabled={!canPlay}
+                title={TEXTS.tooltips.play[lang]}
+              >
+                {TEXTS.play[lang]} G${formatBalance(betAmount)}
+              </motion.button>
+            </div>
 
-            {/* BOTAO JOGAR */}
-            <motion.button
-              style={{
-                ...styles.btnJogar,
-                ...(canPlay ? {} : styles.btnJogarDisabled),
-              }}
-              onClick={handlePlay}
-              whileHover={canPlay ? { scale: 1.05 } : {}}
-              whileTap={canPlay ? { scale: 0.97 } : {}}
-              disabled={!canPlay}
-              title={TEXTS.tooltips.play[lang]}
-            >
-              {TEXTS.play[lang]} G${formatBalance(betAmount)}
-            </motion.button>
+            {/* SELECAO ATUAL */}
+            {selectedAnimals.length > 0 && (
+              <div style={{
+                display: "flex",
+                flexWrap: "wrap" as const,
+                gap: "6px",
+                padding: "8px",
+                background: "rgba(0,230,118,0.05)",
+                borderRadius: "8px",
+                border: "1px solid rgba(0,230,118,0.15)",
+              }}>
+                <span style={{
+                  width: "100%",
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "clamp(8px, 0.9vw, 10px)",
+                  color: "rgba(0,230,118,0.7)",
+                  marginBottom: "2px",
+                }}>
+                  {lang === "br" ? "Selecionados" : "Selected"}: {selectedAnimals.length}/{MODE_CONFIG[betMode].required}
+                </span>
+                {selectedAnimals.map((id) => {
+                  const animal = ANIMALS.find((a) => a.id === id);
+                  return (
+                    <span key={id} style={{
+                      padding: "4px 8px",
+                      background: "rgba(0,230,118,0.1)",
+                      borderRadius: "4px",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "clamp(9px, 1vw, 11px)",
+                      color: "#00E676",
+                    }}>
+                      {id.toString().padStart(2, "0")}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* BOTOES PF + HISTORICO */}
+            {/* BOTOES PF + HISTORICO + SOM */}
             <div style={styles.footerBtns}>
               <motion.button
                 style={styles.footerBtn}
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.08, borderColor: "rgba(212,168,67,0.3)" }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowProvablyFair(true)}
                 title={TEXTS.tooltips.pfBtn[lang]}
               >
@@ -1416,7 +1495,8 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
               </motion.button>
               <motion.button
                 style={styles.footerBtn}
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.08, borderColor: "rgba(212,168,67,0.3)" }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowHistory(true)}
                 title={TEXTS.tooltips.historyBtn[lang]}
               >
@@ -1425,7 +1505,8 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
               <motion.button
                 style={styles.footerBtn}
                 onClick={() => setSoundEnabled(!soundEnabled)}
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.08, borderColor: "rgba(212,168,67,0.3)" }}
+                whileTap={{ scale: 0.95 }}
               >
                 <img
                   src={soundEnabled ? ASSETS.iconSoundOn : ASSETS.iconSoundOff}
