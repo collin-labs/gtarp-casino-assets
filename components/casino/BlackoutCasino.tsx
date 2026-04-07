@@ -18,6 +18,7 @@ import { useSoundManager } from "@/hooks/use-sound-manager";
 import { useGameAPI } from "@/hooks/use-game-api";
 import { CrashGame } from "@/components/games/crash";
 import { SlotsGame } from "@/components/games/slots";
+import AnimalGame from "@/components/games/bicho/AnimalGame";
 
 export default function BlackoutCasino() {
   const { lang, setLang, activeTab, setActiveTab, selectedGame, setSelectedGame, activeGame, setActiveGame, saldo } = useCasino();
@@ -401,7 +402,16 @@ export default function BlackoutCasino() {
                   onBack={() => setActiveGame(null)}
                 />
               )}
-              {activeGame && activeGame !== "crash" && activeGame !== "slots" && (
+              {activeGame === "anima-game" && (
+                <AnimalGame
+                  key="anima-game"
+                  onBack={() => setActiveGame(null)}
+                  lang={lang}
+                  playerId="player-001"
+                  initialBalance={saldo}
+                />
+              )}
+              {activeGame && activeGame !== "crash" && activeGame !== "slots" && activeGame !== "anima-game" && (
                 <ComingSoon
                   key={activeGame}
                   onBack={() => setActiveGame(null)}
