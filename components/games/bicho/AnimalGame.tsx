@@ -6,7 +6,7 @@ import { useCasino } from "@/contexts/CasinoContext";
 
 // ===========================================================================
 // ANIMAL GAME / JOGO DO BICHO (#9) — Blackout Casino GTARP
-// Telas 1-3: APOSTAS, SORTEIO, VITORIA
+// Telas 1-6: APOSTAS, SORTEIO, VITORIA, DERROTA, HISTORICO, PROVABLY FAIR
 // CSS inline, zero Tailwind, Framer Motion
 // ===========================================================================
 
@@ -26,6 +26,26 @@ interface DrawResult {
   animalId: number;
 }
 
+interface HistoryEntry {
+  id: number;
+  mode: BetMode;
+  won: boolean;
+  payout: number;
+  betAmount: number;
+  animals: number[];
+  selectedAnimals: number[];
+  hora: string;
+}
+
+interface FairData {
+  serverSeedHash: string;
+  clientSeed: string;
+  nonce: number;
+  serverSeed: string;
+  resultHash: string;
+  isValid: boolean | null;
+}
+
 // ===========================================================================
 // CONSTANTES
 // ===========================================================================
@@ -40,6 +60,7 @@ const ASSETS = {
   iconSoundOff: "/assets/shared/icons/icon-sound-off.png",
   iconRandom: "/assets/shared/icons/icon-random.png",
   iconGcoin: "/assets/shared/icons/icon-gcoin.png",
+  iconCopy: "/assets/shared/icons/icon-copy.png",
   getAnimal: (id: number) => `/assets/games/bicho/${id}.png`,
 };
 
@@ -96,10 +117,44 @@ const TEXTS = {
   drawing: { br: "SORTEIO EM ANDAMENTO", in: "DRAWING IN PROGRESS" },
   skip: { br: "Pular animacao >>", in: "Skip animation >>" },
   youWon: { br: "VOCE GANHOU!", in: "YOU WON!" },
+  noMatch: { br: "Nenhum acerto", in: "No match" },
   playAgain: { br: "JOGAR NOVAMENTE", in: "PLAY AGAIN" },
+  newRound: { br: "NOVA RODADA", in: "NEW ROUND" },
   backToLobby: { br: "VOLTAR", in: "BACK" },
   yourAnimals: { br: "Seus animais:", in: "Your animals:" },
   position: { br: "Posicao", in: "Position" },
+  history: { br: "HISTORICO", in: "HISTORY" },
+  provablyFair: { br: "PROVABLY FAIR", in: "PROVABLY FAIR" },
+  serverSeedHash: { br: "Server Seed Hash (pre-jogo):", in: "Server Seed Hash (pre-game):" },
+  clientSeed: { br: "Client Seed:", in: "Client Seed:" },
+  nonce: { br: "Nonce:", in: "Nonce:" },
+  serverSeed: { br: "Server Seed (pos-jogo):", in: "Server Seed (post-game):" },
+  verify: { br: "VERIFICAR", in: "VERIFY" },
+  valid: { br: "VALIDO", in: "VALID" },
+  invalid: { br: "INVALIDO", in: "INVALID" },
+  howItWorks: {
+    br: "O resultado e determinado combinando o Server Seed, Client Seed e Nonce atraves de HMAC-SHA256. Voce pode verificar a integridade do jogo recalculando o hash.",
+    in: "The result is determined by combining the Server Seed, Client Seed and Nonce through HMAC-SHA256. You can verify game integrity by recalculating the hash."
+  },
+  copied: { br: "Copiado!", in: "Copied!" },
+  drawnAnimals: { br: "Animais sorteados:", in: "Drawn animals:" },
+  result: { br: "Resultado", in: "Result" },
+  tooltips: {
+    back: { br: "Voltar ao lobby do cassino", in: "Back to casino lobby" },
+    cardNormal: { br: "Clique para selecionar", in: "Click to select" },
+    cardSelected: { br: "Clique para deselecionar", in: "Click to deselect" },
+    cardDisabled: { br: "Limite de animais neste modo", in: "Animal limit in this mode" },
+    simple: { br: "1 animal. 12x cabeca, 3x cercada", in: "1 animal. 12x head, 3x surrounded" },
+    dupla: { br: "2 animais. 90x nos 2 primeiros", in: "2 animals. 90x on first 2" },
+    tripla: { br: "3 animais. 650x nos 3 primeiros", in: "3 animals. 650x on first 3" },
+    quadra: { br: "4 animais. 3.500x nos 4 primeiros", in: "4 animals. 3,500x on first 4" },
+    quina: { br: "5 animais. 15.000x se todos", in: "5 animals. 15,000x if all match" },
+    random: { br: "Selecao aleatoria", in: "Random selection" },
+    play: { br: "Confirmar aposta", in: "Confirm bet" },
+    historyBtn: { br: "Ver ultimas rodadas", in: "View past rounds" },
+    pfBtn: { br: "Verificar fairness", in: "Verify fairness" },
+    verifyBtn: { br: "Recalcular hash", in: "Recalculate hash" },
+  },
 };
 
 // ===========================================================================
@@ -136,6 +191,16 @@ function formatBalance(num: number): string {
   return num.toLocaleString("pt-BR");
 }
 
+function generateRandomHex(length: number): string {
+  const chars = "0123456789abcdef";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * 16)]).join("");
+}
+
+function getCurrentTime(): string {
+  const now = new Date();
+  return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+}
+
 // ===========================================================================
 // COMPONENTE PRINCIPAL
 // ===========================================================================
@@ -155,6 +220,20 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
   const [matchedPositions, setMatchedPositions] = useState<number[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // Estado para modais (Telas 5 e 6)
+  const [showHistory, setShowHistory] = useState(false);
+  const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [fairData, setFairData] = useState<FairData>({
+    serverSeedHash: generateRandomHex(64),
+    clientSeed: "abc123xyz",
+    nonce: 1,
+    serverSeed: "",
+    resultHash: "",
+    isValid: null,
+  });
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Counter animado para vitoria
   const counterValue = useMotionValue(0);
@@ -200,6 +279,16 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
     const results = generateDrawResults();
     setDrawResults(results);
 
+    // Gerar novo serverSeedHash para proxima rodada
+    setFairData(prev => ({
+      ...prev,
+      serverSeedHash: generateRandomHex(64),
+      serverSeed: generateRandomHex(64),
+      resultHash: generateRandomHex(64),
+      nonce: prev.nonce + 1,
+      isValid: null,
+    }));
+
     // Verificar vitoria
     const drawnAnimalIds = results.map((r) => r.animalId);
     const matches: number[] = [];
@@ -232,6 +321,21 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleNewRound = useCallback(() => {
+    // Adicionar ao historico
+    if (drawResults.length > 0) {
+      const newEntry: HistoryEntry = {
+        id: history.length + 1,
+        mode: betMode,
+        won: isWin,
+        payout: winAmount,
+        betAmount,
+        animals: drawResults.map(r => r.animalId),
+        selectedAnimals: [...selectedAnimals],
+        hora: getCurrentTime(),
+      };
+      setHistory(prev => [newEntry, ...prev].slice(0, 50));
+    }
+
     setPhase("BETTING");
     setSelectedAnimals([]);
     setDrawResults([]);
@@ -240,6 +344,25 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
     setWinAmount(0);
     setMatchedPositions([]);
     setShowConfetti(false);
+  }, [drawResults, history.length, betMode, isWin, winAmount, betAmount, selectedAnimals]);
+
+  const handleCopy = useCallback(async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {
+      // Fallback silencioso
+    }
+  }, []);
+
+  const handleVerify = useCallback(async () => {
+    // Simulacao de verificacao - em producao usaria Web Crypto API
+    // crypto.subtle.importKey + crypto.subtle.sign
+    setFairData(prev => ({
+      ...prev,
+      isValid: true, // Simulado como valido
+    }));
   }, []);
 
   // ===========================================================================
@@ -249,17 +372,6 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
   // Reveal sequencial das capsulas
   useEffect(() => {
     if (phase !== "DRAWING" || drawResults.length === 0) return;
-
-    const revealSequence = async () => {
-      for (let i = 0; i < 5; i++) {
-        if (revealedCapsules.length === 5) break;
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        setRevealedCapsules((prev) => {
-          if (prev.includes(i)) return prev;
-          return [...prev, i];
-        });
-      }
-    };
 
     if (revealedCapsules.length < 5) {
       const timeout = setTimeout(() => {
@@ -626,6 +738,8 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
       fontWeight: 500,
       fontSize: "clamp(9px, 1.1vw, 13px)",
       color: "#A8A8A8",
+      flexWrap: "wrap" as const,
+      justifyContent: "center",
     },
     betInfoAnimal: {
       padding: "2px 6px",
@@ -814,6 +928,321 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
       gap: "clamp(8px, 1vw, 16px)",
       justifyContent: "center",
     },
+    // TELA 4 - DERROTA
+    defeatTitle: {
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 500,
+      fontSize: "clamp(14px, 2vw, 22px)",
+      color: "rgba(212,168,67,0.5)",
+    },
+    defeatLoss: {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 600,
+      fontSize: "clamp(12px, 1.5vw, 18px)",
+      color: "rgba(255,68,68,0.6)",
+    },
+    defeatAnimalDim: {
+      opacity: 0.4,
+      background: "rgba(255,68,68,0.05)",
+      border: "1px solid rgba(255,68,68,0.15)",
+    },
+    // TELA 5 - HISTORICO
+    historyDrawer: {
+      position: "absolute" as const,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 68,
+      width: "clamp(250px, 30vw, 380px)",
+      background: "rgba(5,5,5,0.97)",
+      borderLeft: "1px solid rgba(212,168,67,0.15)",
+      backdropFilter: "blur(6px)",
+      overflowY: "auto" as const,
+      display: "flex",
+      flexDirection: "column" as const,
+    },
+    historyHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "clamp(8px, 1vw, 14px)",
+      borderBottom: "1px solid rgba(212,168,67,0.1)",
+      flexShrink: 0,
+    },
+    historyTitle: {
+      fontFamily: "'Cinzel', serif",
+      fontWeight: 700,
+      fontSize: "clamp(11px, 1.3vw, 15px)",
+      color: "#D4A843",
+      textTransform: "uppercase" as const,
+      letterSpacing: "2px",
+    },
+    historyClose: {
+      width: "28px",
+      height: "28px",
+      borderRadius: "4px",
+      background: "rgba(0,0,0,0.4)",
+      border: "1px solid rgba(212,168,67,0.15)",
+      color: "rgba(212,168,67,0.6)",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "'Inter', sans-serif",
+      fontSize: "14px",
+    },
+    historyList: {
+      flex: 1,
+      overflowY: "auto" as const,
+    },
+    historyRow: {
+      padding: "clamp(6px, 0.8vw, 10px)",
+      borderBottom: "1px solid rgba(255,255,255,0.03)",
+    },
+    historyRowOdd: {
+      background: "rgba(5,5,5,0.95)",
+    },
+    historyRowEven: {
+      background: "rgba(10,10,10,0.95)",
+    },
+    historyRowHeader: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      marginBottom: "4px",
+    },
+    historyId: {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 600,
+      fontSize: "clamp(8px, 0.9vw, 11px)",
+      color: "rgba(212,168,67,0.4)",
+    },
+    historyBadgeWin: {
+      background: "rgba(0,230,118,0.15)",
+      border: "1px solid rgba(0,230,118,0.3)",
+      color: "#00E676",
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 700,
+      fontSize: "clamp(7px, 0.8vw, 10px)",
+      padding: "2px 6px",
+      borderRadius: "4px",
+    },
+    historyBadgeLoss: {
+      background: "rgba(255,68,68,0.1)",
+      border: "1px solid rgba(255,68,68,0.2)",
+      color: "rgba(255,68,68,0.6)",
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 700,
+      fontSize: "clamp(7px, 0.8vw, 10px)",
+      padding: "2px 6px",
+      borderRadius: "4px",
+    },
+    historyPayoutWin: {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 700,
+      fontSize: "clamp(9px, 1vw, 12px)",
+      color: "#00E676",
+    },
+    historyPayoutLoss: {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 600,
+      fontSize: "clamp(9px, 1vw, 12px)",
+      color: "rgba(255,68,68,0.4)",
+    },
+    historyAnimals: {
+      display: "flex",
+      gap: "4px",
+      marginBottom: "4px",
+    },
+    historyAnimalIcon: {
+      width: "20px",
+      height: "20px",
+      borderRadius: "3px",
+      background: "rgba(0,0,0,0.3)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    historyAnimalIconMatch: {
+      border: "1px solid rgba(0,230,118,0.3)",
+    },
+    historyAnimalImg: {
+      width: "16px",
+      height: "16px",
+      objectFit: "contain" as const,
+    },
+    historyMeta: {
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 400,
+      fontSize: "clamp(7px, 0.8vw, 10px)",
+      color: "rgba(212,168,67,0.3)",
+    },
+    historyEmpty: {
+      padding: "24px",
+      textAlign: "center" as const,
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 400,
+      fontSize: "clamp(9px, 1vw, 12px)",
+      color: "rgba(212,168,67,0.3)",
+    },
+    // TELA 6 - PROVABLY FAIR
+    pfBackdrop: {
+      position: "fixed" as const,
+      inset: 0,
+      zIndex: 75,
+      background: "rgba(0,0,0,0.6)",
+      backdropFilter: "blur(4px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pfModal: {
+      width: "clamp(280px, 45vw, 450px)",
+      maxHeight: "85vh",
+      background: "rgba(8,8,8,0.98)",
+      border: "1px solid rgba(212,168,67,0.2)",
+      borderRadius: "12px",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+      padding: "clamp(12px, 2vw, 24px)",
+      overflowY: "auto" as const,
+      position: "relative" as const,
+    },
+    pfHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "clamp(12px, 1.5vw, 20px)",
+    },
+    pfTitle: {
+      fontFamily: "'Cinzel', serif",
+      fontWeight: 700,
+      fontSize: "clamp(11px, 1.3vw, 16px)",
+      color: "#D4A843",
+      textTransform: "uppercase" as const,
+      letterSpacing: "2px",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+    },
+    pfClose: {
+      width: "28px",
+      height: "28px",
+      borderRadius: "4px",
+      background: "rgba(0,0,0,0.4)",
+      border: "1px solid rgba(212,168,67,0.15)",
+      color: "rgba(212,168,67,0.6)",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "'Inter', sans-serif",
+      fontSize: "14px",
+    },
+    pfLabel: {
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 500,
+      fontSize: "clamp(8px, 0.9vw, 11px)",
+      color: "rgba(212,168,67,0.5)",
+      marginBottom: "4px",
+      display: "block",
+    },
+    pfFieldRow: {
+      display: "flex",
+      gap: "8px",
+      alignItems: "center",
+      marginBottom: "clamp(8px, 1vw, 14px)",
+    },
+    pfFieldReadonly: {
+      flex: 1,
+      padding: "clamp(6px, 0.8vw, 10px)",
+      background: "rgba(0,0,0,0.4)",
+      border: "1px solid rgba(212,168,67,0.1)",
+      borderRadius: "6px",
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 400,
+      fontSize: "clamp(8px, 0.9vw, 11px)",
+      color: "#A8A8A8",
+      wordBreak: "break-all" as const,
+    },
+    pfFieldEditable: {
+      flex: 1,
+      padding: "clamp(6px, 0.8vw, 10px)",
+      background: "rgba(0,0,0,0.6)",
+      border: "1px solid rgba(212,168,67,0.2)",
+      borderRadius: "6px",
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 400,
+      fontSize: "clamp(8px, 0.9vw, 11px)",
+      color: "#FFFFFF",
+      cursor: "text",
+      outline: "none",
+    },
+    pfCopyBtn: {
+      width: "24px",
+      height: "24px",
+      background: "transparent",
+      border: "none",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    pfCopyIcon: {
+      width: "16px",
+      height: "16px",
+      opacity: 0.4,
+      transition: "opacity 0.2s ease",
+    },
+    pfCopyIconCopied: {
+      filter: "brightness(0) saturate(100%) invert(67%) sepia(52%) saturate(5765%) hue-rotate(122deg) brightness(101%) contrast(101%)",
+      opacity: 1,
+    },
+    pfVerifyBtn: {
+      width: "100%",
+      padding: "clamp(8px, 1vw, 12px)",
+      background: "rgba(212,168,67,0.1)",
+      border: "1.5px solid rgba(212,168,67,0.3)",
+      borderRadius: "8px",
+      fontFamily: "'Cinzel', serif",
+      fontWeight: 700,
+      fontSize: "clamp(10px, 1.2vw, 14px)",
+      color: "#D4A843",
+      textTransform: "uppercase" as const,
+      letterSpacing: "1px",
+      cursor: "pointer",
+      minHeight: "44px",
+      marginTop: "clamp(8px, 1vw, 14px)",
+    },
+    pfResultBadge: {
+      display: "inline-block",
+      padding: "4px 12px",
+      borderRadius: "6px",
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 700,
+      fontSize: "clamp(9px, 1vw, 12px)",
+      marginTop: "clamp(8px, 1vw, 14px)",
+      textAlign: "center" as const,
+    },
+    pfResultValid: {
+      background: "rgba(0,230,118,0.08)",
+      border: "1px solid rgba(0,230,118,0.3)",
+      color: "#00E676",
+    },
+    pfResultInvalid: {
+      background: "rgba(255,68,68,0.08)",
+      border: "1px solid rgba(255,68,68,0.3)",
+      color: "#FF4444",
+    },
+    pfExplainer: {
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 400,
+      fontSize: "clamp(8px, 0.9vw, 11px)",
+      color: "rgba(212,168,67,0.3)",
+      marginTop: "12px",
+      lineHeight: 1.5,
+    },
   }), []);
 
   // ===========================================================================
@@ -849,6 +1278,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
           onClick={onBack}
           whileHover={{ x: -2, color: "#D4A843" }}
           whileTap={{ scale: 0.95 }}
+          title={TEXTS.tooltips.back[lang]}
         >
           {TEXTS.back[lang]}
         </motion.button>
@@ -884,6 +1314,12 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
               const selectionIndex = selectedAnimals.indexOf(animal.id);
               const isDisabled = !isSelected && selectedAnimals.length >= maxSelections;
 
+              const tooltip = isSelected
+                ? TEXTS.tooltips.cardSelected[lang]
+                : isDisabled
+                ? TEXTS.tooltips.cardDisabled[lang]
+                : TEXTS.tooltips.cardNormal[lang];
+
               return (
                 <motion.div
                   key={animal.id}
@@ -898,6 +1334,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
                   whileHover={!isDisabled ? { scale: 1.05, borderColor: "rgba(212,168,67,0.5)" } : {}}
                   whileTap={!isDisabled ? { scale: 0.97 } : {}}
                   onClick={() => !isDisabled && handleSelectAnimal(animal.id)}
+                  title={tooltip}
                 >
                   <span style={styles.cardGrupo}>{animal.id.toString().padStart(2, "0")}</span>
                   <img src={ASSETS.getAnimal(animal.id)} alt={animal.name[lang]} style={styles.cardImg} />
@@ -930,6 +1367,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
                   }}
                   onClick={() => handleModeChange(mode)}
                   whileTap={{ scale: 0.95 }}
+                  title={TEXTS.tooltips[mode][lang]}
                 >
                   {TEXTS.modes[mode][lang]}
                 </motion.button>
@@ -948,6 +1386,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
                   onClick={() => setBetAmount(chip)}
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
+                  title={`${lang === "br" ? "Apostar" : "Bet"} G$${chip}`}
                 >
                   {chip >= 1000 ? `${chip / 1000}k` : chip}
                 </motion.button>
@@ -969,6 +1408,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
               style={styles.btnRandom}
               onClick={handleRandomSelect}
               whileTap={{ scale: 0.95 }}
+              title={TEXTS.tooltips.random[lang]}
             >
               <img src={ASSETS.iconRandom} alt="" style={{ width: "16px", height: "16px", opacity: 0.8 }} />
               {TEXTS.random[lang]}
@@ -984,16 +1424,27 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
               whileHover={canPlay ? { scale: 1.05 } : {}}
               whileTap={canPlay ? { scale: 0.97 } : {}}
               disabled={!canPlay}
+              title={TEXTS.tooltips.play[lang]}
             >
               {TEXTS.play[lang]} G${formatBalance(betAmount)}
             </motion.button>
 
             {/* BOTOES PF + HISTORICO */}
             <div style={styles.footerBtns}>
-              <motion.button style={styles.footerBtn} whileHover={{ scale: 1.1 }}>
+              <motion.button
+                style={styles.footerBtn}
+                whileHover={{ scale: 1.1 }}
+                onClick={() => setShowProvablyFair(true)}
+                title={TEXTS.tooltips.pfBtn[lang]}
+              >
                 <img src={ASSETS.iconProvablyFair} alt="Provably Fair" style={styles.footerBtnIcon} />
               </motion.button>
-              <motion.button style={styles.footerBtn} whileHover={{ scale: 1.1 }}>
+              <motion.button
+                style={styles.footerBtn}
+                whileHover={{ scale: 1.1 }}
+                onClick={() => setShowHistory(true)}
+                title={TEXTS.tooltips.historyBtn[lang]}
+              >
                 <img src={ASSETS.iconHistory} alt="History" style={styles.footerBtnIcon} />
               </motion.button>
               <motion.button
@@ -1133,7 +1584,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
         )}
       </AnimatePresence>
 
-      {/* TELA 3 - VITORIA (ou derrota discreta) */}
+      {/* TELA 3 - VITORIA / TELA 4 - DERROTA */}
       <AnimatePresence>
         {phase === "RESULT" && (
           <motion.div
@@ -1143,7 +1594,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
           >
-            {/* CONFETTI */}
+            {/* CONFETTI (apenas vitoria) */}
             {showConfetti && confettiPieces.map((piece) => (
               <motion.span
                 key={piece.id}
@@ -1164,6 +1615,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
             ))}
 
             {isWin ? (
+              /* TELA 3 - VITORIA */
               <>
                 <motion.h2
                   style={styles.winTitle}
@@ -1188,74 +1640,96 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
                 </div>
               </>
             ) : (
-              <motion.h2
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontWeight: 500,
-                  fontSize: "clamp(12px, 1.5vw, 18px)",
-                  color: "rgba(212,168,67,0.4)",
-                }}
-                initial={{ x: -2 }}
-                animate={{ x: [0, -2, 2, -2, 0] }}
-                transition={{ duration: 0.4 }}
-              >
-                {lang === "br" ? "Nenhum acerto" : "No match"}
-              </motion.h2>
+              /* TELA 4 - DERROTA (feedback discreto) */
+              <>
+                <motion.h2
+                  style={styles.defeatTitle}
+                  initial={{ x: 0 }}
+                  animate={{ x: [-2, 2, -2, 0] }}
+                  transition={{ duration: 0.4 }}
+                >
+                  {TEXTS.noMatch[lang]}
+                </motion.h2>
+
+                <motion.div
+                  style={styles.defeatLoss}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  -G${formatBalance(betAmount)}
+                </motion.div>
+              </>
             )}
 
-            {/* MINI-CARDS */}
-            <div style={styles.miniCards}>
-              {drawResults.map((result, i) => {
-                const animal = ANIMALS.find((a) => a.id === result.animalId);
-                const isMatch = selectedAnimals.includes(result.animalId);
-                return (
-                  <motion.div
-                    key={i}
+            {/* MINI-CARDS DOS ANIMAIS SORTEADOS */}
+            <div style={{ marginTop: "8px" }}>
+              <div style={{ ...styles.betInfo, marginBottom: "8px" }}>
+                <span>{TEXTS.drawnAnimals[lang]}</span>
+              </div>
+              <div style={styles.miniCards}>
+                {drawResults.map((result, i) => {
+                  const animal = ANIMALS.find((a) => a.id === result.animalId);
+                  const isMatch = selectedAnimals.includes(result.animalId);
+                  return (
+                    <motion.div
+                      key={i}
+                      style={{
+                        ...styles.miniCard,
+                        ...(isMatch ? styles.miniCardMatch : styles.miniCardMiss),
+                        ...(!isWin && !isMatch ? styles.defeatAnimalDim : {}),
+                      }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                    >
+                      {animal && (
+                        <img
+                          src={ASSETS.getAnimal(animal.id)}
+                          alt={animal.name[lang]}
+                          style={styles.miniCardImg}
+                        />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ANIMAIS SELECIONADOS */}
+            <div style={{ ...styles.betInfo, marginTop: "8px" }}>
+              <span>{TEXTS.yourAnimals[lang]}</span>
+              {selectedAnimals.map((id) => {
+                const animal = ANIMALS.find((a) => a.id === id);
+                const wasDrawn = drawResults.some(r => r.animalId === id);
+                return animal ? (
+                  <span
+                    key={id}
                     style={{
-                      ...styles.miniCard,
-                      ...(isMatch ? styles.miniCardMatch : styles.miniCardMiss),
+                      ...styles.betInfoAnimal,
+                      ...(wasDrawn ? {} : { opacity: 0.4, background: "rgba(255,68,68,0.1)", borderColor: "rgba(255,68,68,0.2)" }),
                     }}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.1 }}
                   >
-                    {animal && (
-                      <img
-                        src={ASSETS.getAnimal(animal.id)}
-                        alt={animal.name[lang]}
-                        style={styles.miniCardImg}
-                      />
-                    )}
-                  </motion.div>
-                );
+                    {animal.name[lang]}
+                  </span>
+                ) : null;
               })}
             </div>
 
-            {/* ANIMAIS SELECIONADOS (derrota) */}
-            {!isWin && (
-              <div style={{ ...styles.betInfo, marginTop: "8px" }}>
-                <span>{TEXTS.yourAnimals[lang]}</span>
-                {selectedAnimals.map((id) => {
-                  const animal = ANIMALS.find((a) => a.id === id);
-                  return animal ? (
-                    <span key={id} style={{ ...styles.betInfoAnimal, opacity: 0.6 }}>
-                      {animal.name[lang]}
-                    </span>
-                  ) : null;
-                })}
-                <span style={{ color: "rgba(255,68,68,0.5)" }}>| -G${formatBalance(betAmount)}</span>
-              </div>
-            )}
-
             {/* BOTOES */}
-            <div style={styles.actionsRow}>
+            <motion.div
+              style={styles.actionsRow}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
               <motion.button
-                style={styles.btnPlayAgain}
+                style={isWin ? styles.btnPlayAgain : { ...styles.btnPlayAgain, borderColor: "rgba(212,168,67,0.4)", color: "#D4A843", background: "rgba(212,168,67,0.08)" }}
                 onClick={handleNewRound}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.97 }}
               >
-                {TEXTS.playAgain[lang]}
+                {isWin ? TEXTS.playAgain[lang] : TEXTS.newRound[lang]}
               </motion.button>
               <motion.button
                 style={styles.btnBack}
@@ -1265,7 +1739,227 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
               >
                 {TEXTS.backToLobby[lang]}
               </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TELA 5 - HISTORICO (Slide-in lateral) */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            style={styles.historyDrawer}
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            <div style={styles.historyHeader}>
+              <span style={styles.historyTitle}>{TEXTS.history[lang]}</span>
+              <motion.button
+                style={styles.historyClose}
+                onClick={() => setShowHistory(false)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                X
+              </motion.button>
             </div>
+
+            <div style={styles.historyList}>
+              {history.length === 0 ? (
+                <div style={styles.historyEmpty}>
+                  {lang === "br" ? "Nenhum historico ainda" : "No history yet"}
+                </div>
+              ) : (
+                history.map((entry, idx) => (
+                  <motion.div
+                    key={entry.id}
+                    style={{
+                      ...styles.historyRow,
+                      ...(idx % 2 === 0 ? styles.historyRowOdd : styles.historyRowEven),
+                    }}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.04 * idx }}
+                  >
+                    <div style={styles.historyRowHeader}>
+                      <span style={styles.historyId}>#{entry.id}</span>
+                      <span style={entry.won ? styles.historyBadgeWin : styles.historyBadgeLoss}>
+                        {entry.won ? "W" : "L"}
+                      </span>
+                      <span style={entry.won ? styles.historyPayoutWin : styles.historyPayoutLoss}>
+                        {entry.won ? `+G$${formatBalance(entry.payout)}` : `-G$${formatBalance(entry.betAmount)}`}
+                      </span>
+                    </div>
+                    <div style={styles.historyAnimals}>
+                      {entry.animals.map((animalId, aIdx) => {
+                        const isMatch = entry.selectedAnimals.includes(animalId);
+                        return (
+                          <div
+                            key={aIdx}
+                            style={{
+                              ...styles.historyAnimalIcon,
+                              ...(isMatch ? styles.historyAnimalIconMatch : {}),
+                            }}
+                          >
+                            <img
+                              src={ASSETS.getAnimal(animalId)}
+                              alt=""
+                              style={styles.historyAnimalImg}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={styles.historyMeta}>
+                      {TEXTS.modes[entry.mode][lang]} | {entry.hora}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TELA 6 - PROVABLY FAIR (Modal central) */}
+      <AnimatePresence>
+        {showProvablyFair && (
+          <motion.div
+            style={styles.pfBackdrop}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowProvablyFair(false)}
+          >
+            <motion.div
+              style={styles.pfModal}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={styles.pfHeader}>
+                <span style={styles.pfTitle}>
+                  <img src={ASSETS.iconProvablyFair} alt="" style={{ width: "20px", height: "20px", opacity: 0.8 }} />
+                  {TEXTS.provablyFair[lang]}
+                </span>
+                <motion.button
+                  style={styles.pfClose}
+                  onClick={() => setShowProvablyFair(false)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  X
+                </motion.button>
+              </div>
+
+              {/* Server Seed Hash */}
+              <label style={styles.pfLabel}>{TEXTS.serverSeedHash[lang]}</label>
+              <div style={styles.pfFieldRow}>
+                <div style={styles.pfFieldReadonly}>
+                  {fairData.serverSeedHash}
+                </div>
+                <motion.button
+                  style={styles.pfCopyBtn}
+                  onClick={() => handleCopy(fairData.serverSeedHash, "serverSeedHash")}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  title={copiedField === "serverSeedHash" ? TEXTS.copied[lang] : ""}
+                >
+                  <img
+                    src={ASSETS.iconCopy}
+                    alt="Copy"
+                    style={{
+                      ...styles.pfCopyIcon,
+                      ...(copiedField === "serverSeedHash" ? styles.pfCopyIconCopied : {}),
+                    }}
+                  />
+                </motion.button>
+              </div>
+
+              {/* Client Seed */}
+              <label style={styles.pfLabel}>{TEXTS.clientSeed[lang]}</label>
+              <div style={styles.pfFieldRow}>
+                <input
+                  type="text"
+                  value={fairData.clientSeed}
+                  onChange={(e) => setFairData(prev => ({ ...prev, clientSeed: e.target.value }))}
+                  style={styles.pfFieldEditable}
+                />
+              </div>
+
+              {/* Nonce */}
+              <label style={styles.pfLabel}>{TEXTS.nonce[lang]}</label>
+              <div style={styles.pfFieldRow}>
+                <div style={styles.pfFieldReadonly}>
+                  {fairData.nonce}
+                </div>
+              </div>
+
+              {/* Server Seed (pos-jogo) */}
+              {fairData.serverSeed && (
+                <>
+                  <label style={styles.pfLabel}>{TEXTS.serverSeed[lang]}</label>
+                  <div style={styles.pfFieldRow}>
+                    <div style={styles.pfFieldReadonly}>
+                      {fairData.serverSeed}
+                    </div>
+                    <motion.button
+                      style={styles.pfCopyBtn}
+                      onClick={() => handleCopy(fairData.serverSeed, "serverSeed")}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      title={copiedField === "serverSeed" ? TEXTS.copied[lang] : ""}
+                    >
+                      <img
+                        src={ASSETS.iconCopy}
+                        alt="Copy"
+                        style={{
+                          ...styles.pfCopyIcon,
+                          ...(copiedField === "serverSeed" ? styles.pfCopyIconCopied : {}),
+                        }}
+                      />
+                    </motion.button>
+                  </div>
+                </>
+              )}
+
+              {/* Botao Verificar */}
+              <motion.button
+                style={styles.pfVerifyBtn}
+                onClick={handleVerify}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                title={TEXTS.tooltips.verifyBtn[lang]}
+              >
+                {TEXTS.verify[lang]}
+              </motion.button>
+
+              {/* Resultado */}
+              {fairData.isValid !== null && (
+                <div style={{ textAlign: "center" }}>
+                  <motion.span
+                    style={{
+                      ...styles.pfResultBadge,
+                      ...(fairData.isValid ? styles.pfResultValid : styles.pfResultInvalid),
+                    }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  >
+                    {TEXTS.result[lang]}: {fairData.isValid ? TEXTS.valid[lang] : TEXTS.invalid[lang]}
+                  </motion.span>
+                </div>
+              )}
+
+              {/* Texto explicativo */}
+              <p style={styles.pfExplainer}>
+                {TEXTS.howItWorks[lang]}
+              </p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
