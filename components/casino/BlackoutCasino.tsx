@@ -17,6 +17,7 @@ import { useRipple } from "@/hooks/use-ripple";
 import { useSoundManager } from "@/hooks/use-sound-manager";
 import { useGameAPI } from "@/hooks/use-game-api";
 import { CrashGame } from "@/components/games/crash";
+import { SlotsGame } from "@/components/games/slots";
 
 export default function BlackoutCasino() {
   const { lang, setLang, activeTab, setActiveTab, selectedGame, setSelectedGame, activeGame, setActiveGame, saldo } = useCasino();
@@ -394,7 +395,13 @@ export default function BlackoutCasino() {
                   onBack={() => setActiveGame(null)}
                 />
               )}
-              {activeGame && activeGame !== "crash" && (
+              {activeGame === "slots" && (
+                <SlotsGame
+                  key="slots"
+                  onBack={() => setActiveGame(null)}
+                />
+              )}
+              {activeGame && activeGame !== "crash" && activeGame !== "slots" && (
                 <ComingSoon
                   key={activeGame}
                   onBack={() => setActiveGame(null)}
