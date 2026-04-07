@@ -626,9 +626,9 @@ export default function SlotsGame({
   const t = (key: keyof typeof TEXTS) => TEXTS[key][lang];
 
   // ==========================================================================
-  // TELA 1 — MODE SELECT
+  // TELA 1 - MODE SELECT
   // ==========================================================================
-  
+
   const renderModeSelect = () => (
     <motion.div
       initial={{ opacity: 0, scale: 0.92, y: 30 }}
@@ -673,7 +673,7 @@ export default function SlotsGame({
           {t("chooseMode")}
         </p>
       </div>
-      
+
       {/* Mode Cards */}
       <div
         style={{
@@ -688,205 +688,245 @@ export default function SlotsGame({
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.15, duration: 0.5, ease: [0, 0, 0.2, 1] }}
-          whileHover={{ scale: 1.03, y: -3 }}
+          whileHover={{ y: -6, scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => handleModeSelect("classic")}
+          title={t("playClassicTooltip")}
           style={{
             width: "clamp(180px, 28vw, 280px)",
-            padding: "clamp(16px, 2.5vw, 32px)",
-            background: "rgba(5,5,5,0.9)",
-            border: "1.5px solid rgba(212,168,67,0.2)",
-            borderRadius: "14px",
+            aspectRatio: "1",
+            borderRadius: 14,
+            border: "2px solid rgba(212,168,67,0.3)",
+            background: "rgba(5,5,5,0.95)",
+            boxShadow: "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)",
             cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "clamp(8px, 1.2vw, 16px)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-            transition: "border-color 0.3s ease",
+            position: "relative",
+            overflow: "hidden",
+            transition: "border 0.3s ease, box-shadow 0.3s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(212,168,67,0.5)";
+            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.7)";
+            e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.5), 0 0 15px rgba(212,168,67,0.15), inset 0 1px 0 rgba(255,215,0,0.15), inset 0 0 20px rgba(0,0,0,0.5)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(212,168,67,0.2)";
+            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.3)";
+            e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)";
           }}
         >
-          {/* Imagem do modo */}
+          {/* Imagem preenche tudo */}
+          <img
+            src="/assets/games/slots/mode-classic.png"
+            alt="Classic Slot"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: 12,
+              zIndex: 0,
+            }}
+          />
+          {/* Glow corner top-left */}
           <div
             style={{
-              width: "100%",
-              aspectRatio: "1",
-              borderRadius: "10px",
-              overflow: "hidden",
-              border: "1px solid rgba(212,168,67,0.15)",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "clamp(30px, 5vw, 60px)",
+              height: "clamp(30px, 5vw, 60px)",
+              background: "radial-gradient(circle at 0% 0%, rgba(255,215,0,0.2) 0%, transparent 70%)",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+          {/* Glow corner bottom-right */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: "clamp(30px, 5vw, 60px)",
+              height: "clamp(30px, 5vw, 60px)",
+              background: "radial-gradient(circle at 100% 100%, rgba(212,168,67,0.15) 0%, transparent 70%)",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+          {/* Borda glow externa */}
+          <div
+            style={{
+              position: "absolute",
+              inset: -2,
+              borderRadius: 16,
+              boxShadow: "0 0 10px rgba(255,215,0,0.12), 0 0 20px rgba(212,168,67,0.05)",
+              pointerEvents: "none",
+              zIndex: 3,
+            }}
+          />
+          {/* Hover overlay com descricao */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 12,
+              background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,0.95) 100%)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              padding: "clamp(12px, 2vw, 20px)",
+              zIndex: 4,
+              opacity: 1,
+              transition: "opacity 0.3s ease",
             }}
           >
-            <img
-              src="/assets/games/slots/mode-classic.png"
-              alt="Classic Slot"
+            <span
               style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 700,
+                fontSize: "clamp(14px, 1.8vw, 20px)",
+                color: "#D4A843",
+                textTransform: "uppercase",
+                letterSpacing: 2,
+                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
               }}
-            />
+            >
+              {t("classic")}
+            </span>
+            <span
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "clamp(9px, 1.1vw, 13px)",
+                color: "#A8A8A8",
+                marginTop: 4,
+              }}
+            >
+              {t("classicDesc")}
+            </span>
           </div>
-          
-          {/* Nome */}
-          <span
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: "clamp(14px, 1.8vw, 20px)",
-              color: "#D4A843",
-              textTransform: "uppercase",
-              letterSpacing: "2px",
-            }}
-          >
-            {t("classic")}
-          </span>
-          
-          {/* Descricao */}
-          <span
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 500,
-              fontSize: "clamp(10px, 1.2vw, 14px)",
-              color: "#A8A8A8",
-              textAlign: "center",
-              lineHeight: 1.5,
-            }}
-          >
-            {t("classicDesc")}
-          </span>
-          
-          {/* Botao Jogar */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title={t("playClassicTooltip")}
-            style={{
-              width: "100%",
-              padding: "clamp(8px, 1vw, 12px) clamp(16px, 2.5vw, 28px)",
-              background: "linear-gradient(180deg, #00C853 0%, #004D25 100%)",
-              border: "1.5px solid rgba(0,230,118,0.3)",
-              borderRadius: "8px",
-              color: "#FFFFFF",
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: "clamp(10px, 1.3vw, 14px)",
-              textTransform: "uppercase",
-              letterSpacing: "2px",
-              cursor: "pointer",
-              minHeight: "44px",
-            }}
-          >
-            {t("play")}
-          </motion.button>
         </motion.div>
-        
+
         {/* Video Card */}
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.3, duration: 0.5, ease: [0, 0, 0.2, 1] }}
-          whileHover={{ scale: 1.03, y: -3 }}
+          whileHover={{ y: -6, scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => handleModeSelect("video")}
+          title={t("playVideoTooltip")}
           style={{
             width: "clamp(180px, 28vw, 280px)",
-            padding: "clamp(16px, 2.5vw, 32px)",
-            background: "rgba(5,5,5,0.9)",
-            border: "1.5px solid rgba(212,168,67,0.2)",
-            borderRadius: "14px",
+            aspectRatio: "1",
+            borderRadius: 14,
+            border: "2px solid rgba(212,168,67,0.3)",
+            background: "rgba(5,5,5,0.95)",
+            boxShadow: "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)",
             cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "clamp(8px, 1.2vw, 16px)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-            transition: "border-color 0.3s ease",
+            position: "relative",
+            overflow: "hidden",
+            transition: "border 0.3s ease, box-shadow 0.3s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(212,168,67,0.5)";
+            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.7)";
+            e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.5), 0 0 15px rgba(212,168,67,0.15), inset 0 1px 0 rgba(255,215,0,0.15), inset 0 0 20px rgba(0,0,0,0.5)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(212,168,67,0.2)";
+            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.3)";
+            e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)";
           }}
         >
-          {/* Imagem do modo */}
+          {/* Imagem preenche tudo */}
+          <img
+            src="/assets/games/slots/mode-video.png"
+            alt="Video Slot"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: 12,
+              zIndex: 0,
+            }}
+          />
+          {/* Glow corner top-left */}
           <div
             style={{
-              width: "100%",
-              aspectRatio: "1",
-              borderRadius: "10px",
-              overflow: "hidden",
-              border: "1px solid rgba(212,168,67,0.15)",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "clamp(30px, 5vw, 60px)",
+              height: "clamp(30px, 5vw, 60px)",
+              background: "radial-gradient(circle at 0% 0%, rgba(255,215,0,0.2) 0%, transparent 70%)",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+          {/* Glow corner bottom-right */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: "clamp(30px, 5vw, 60px)",
+              height: "clamp(30px, 5vw, 60px)",
+              background: "radial-gradient(circle at 100% 100%, rgba(212,168,67,0.15) 0%, transparent 70%)",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+          {/* Borda glow externa */}
+          <div
+            style={{
+              position: "absolute",
+              inset: -2,
+              borderRadius: 16,
+              boxShadow: "0 0 10px rgba(255,215,0,0.12), 0 0 20px rgba(212,168,67,0.05)",
+              pointerEvents: "none",
+              zIndex: 3,
+            }}
+          />
+          {/* Hover overlay com descricao */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 12,
+              background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,0.95) 100%)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              padding: "clamp(12px, 2vw, 20px)",
+              zIndex: 4,
+              opacity: 1,
+              transition: "opacity 0.3s ease",
             }}
           >
-            <img
-              src="/assets/games/slots/mode-video.png"
-              alt="Video Slot"
+            <span
               style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 700,
+                fontSize: "clamp(14px, 1.8vw, 20px)",
+                color: "#D4A843",
+                textTransform: "uppercase",
+                letterSpacing: 2,
+                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
               }}
-            />
+            >
+              {t("video")}
+            </span>
+            <span
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "clamp(9px, 1.1vw, 13px)",
+                color: "#A8A8A8",
+                marginTop: 4,
+              }}
+            >
+              {t("videoDesc")}
+            </span>
           </div>
-          
-          {/* Nome */}
-          <span
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: "clamp(14px, 1.8vw, 20px)",
-              color: "#D4A843",
-              textTransform: "uppercase",
-              letterSpacing: "2px",
-            }}
-          >
-            {t("video")}
-          </span>
-          
-          {/* Descricao */}
-          <span
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 500,
-              fontSize: "clamp(10px, 1.2vw, 14px)",
-              color: "#A8A8A8",
-              textAlign: "center",
-              lineHeight: 1.5,
-            }}
-          >
-            {t("videoDesc")}
-          </span>
-          
-          {/* Botao Jogar */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title={t("playVideoTooltip")}
-            style={{
-              width: "100%",
-              padding: "clamp(8px, 1vw, 12px) clamp(16px, 2.5vw, 28px)",
-              background: "linear-gradient(180deg, #00C853 0%, #004D25 100%)",
-              border: "1.5px solid rgba(0,230,118,0.3)",
-              borderRadius: "8px",
-              color: "#FFFFFF",
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: "clamp(10px, 1.3vw, 14px)",
-              textTransform: "uppercase",
-              letterSpacing: "2px",
-              cursor: "pointer",
-              minHeight: "44px",
-            }}
-          >
-            {t("play")}
-          </motion.button>
         </motion.div>
       </div>
     </motion.div>
