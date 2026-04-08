@@ -17,6 +17,7 @@ import { useRipple } from "@/hooks/use-ripple";
 import { useSoundManager } from "@/hooks/use-sound-manager";
 import { useGameAPI } from "@/hooks/use-game-api";
 import { CrashGame } from "@/components/games/crash";
+import { AnimalGame } from "@/components/games/bicho";
 import { SlotsGame } from "@/components/games/slots";
 
 export default function BlackoutCasino() {
@@ -395,13 +396,19 @@ export default function BlackoutCasino() {
                   onBack={() => setActiveGame(null)}
                 />
               )}
+              {activeGame === "anima-game" && (
+                <AnimalGame
+                  key="anima-game"
+                  onBack={() => setActiveGame(null)}
+                />
+              )}
               {activeGame === "slots" && (
                 <SlotsGame
                   key="slots"
                   onBack={() => setActiveGame(null)}
                 />
               )}
-              {activeGame && activeGame !== "crash" && activeGame !== "slots" && (
+              {activeGame && activeGame !== "crash" && activeGame !== "anima-game" && activeGame !== "slots" && (
                 <ComingSoon
                   key={activeGame}
                   onBack={() => setActiveGame(null)}

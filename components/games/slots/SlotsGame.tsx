@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCasino } from "@/contexts/CasinoContext";
+import {
+  createProvablyFairSession, generateGrid as engineGenerateGrid,
+  executeVideoSpin, executeClassicSpin, executeBuyBonus,
+} from "./SlotsEngine";
+import type { SpinResult, Grid as EngineGrid, GridCell } from "./SlotsTypes";
+import { VIDEO_SYMBOLS, CLASSIC_SYMBOLS as ENGINE_CLASSIC_SYMBOLS, MIN_BET, MAX_BET, BUY_BONUS_MULTIPLIER } from "./SlotsConstants";
+import DevToolbar from "@/components/casino/DevToolbar";
 
 // ===========================================================================
 // SLOTS GAME — Blackout Casino
@@ -36,23 +43,8 @@ const ASSETS = {
   logoSlotsEn: "/assets/logos-in-para-cards/2.LOGO-IN-SLOT-MACHINE.png",
 };
 
-// Simbolos do Video Slot (11 simbolos)
-const VIDEO_SYMBOLS = [
-  { id: "crown", path: "/assets/games/slots/symbols/crown.png", tier: "premium", color: "#FFD700" },
-  { id: "ring", path: "/assets/games/slots/symbols/ring.png", tier: "premium", color: "#D4A843" },
-  { id: "hourglass", path: "/assets/games/slots/symbols/hourglass.png", tier: "premium", color: "#CB9B51" },
-  { id: "chalice", path: "/assets/games/slots/symbols/chalice.png", tier: "premium", color: "#8B6914" },
-  { id: "ruby", path: "/assets/games/slots/symbols/ruby.png", tier: "gem", color: "#FF1744" },
-  { id: "sapphire", path: "/assets/games/slots/symbols/sapphire.png", tier: "gem", color: "#1E88E5" },
-  { id: "emerald", path: "/assets/games/slots/symbols/emerald.png", tier: "gem", color: "#43A047" },
-  { id: "amethyst", path: "/assets/games/slots/symbols/amethyst.png", tier: "gem", color: "#8E24AA" },
-  { id: "topaz", path: "/assets/games/slots/symbols/topaz.png", tier: "gem", color: "#FF8F00" },
-  { id: "scatter", path: "/assets/games/slots/symbols/scatter.png", tier: "special", color: "#FFD700" },
-  { id: "multiplier_orb", path: "/assets/games/slots/symbols/multiplier_orb.png", tier: "special", color: "#FFD700" },
-];
-
-// Simbolos regulares (sem scatter/orb para grid normal)
-const REGULAR_SYMBOLS = VIDEO_SYMBOLS.filter(s => s.tier !== "special");
+// Simbolos regulares (sem scatter/orb para grid visual)
+const REGULAR_SYMBOLS = VIDEO_SYMBOLS.filter(s => s.id !== "scatter" && s.id !== "multiplier_orb");
 
 // Simbolos do Classic Slot (7 simbolos)
 const CLASSIC_SYMBOLS = [
@@ -217,7 +209,8 @@ export default function SlotsGame({
   initialBalance,
 }: SlotsGameProps) {
   const { saldo, setSaldo, lang: contextLang } = useCasino();
-  const lang = propLang || contextLang || "br";
+  const rawLang = propLang || contextLang || "br";
+  const lang = rawLang === "in" ? "en" : rawLang as "br" | "en";
   
   // Estados principais
   const [screen, setScreen] = useState<SlotsScreen>("modeSelect");
@@ -241,6 +234,7 @@ export default function SlotsGame({
   const [freeSpinsTotal, setFreeSpinsTotal] = useState(0);
   const [fsMultiplier, setFsMultiplier] = useState(1);
   const [fsTotalWin, setFsTotalWin] = useState(0);
+  const [fsExitConfirm, setFsExitConfirm] = useState(false);
   
   // Win Overlay
   const [winOverlayData, setWinOverlayData] = useState<{ amount: number; ratio: number } | null>(null);
@@ -251,6 +245,8 @@ export default function SlotsGame({
   const [classicSpinning, setClassicSpinning] = useState([false, false, false]);
   const [classicStopped, setClassicStopped] = useState([false, false, false]);
   const [isLeverPulled, setIsLeverPulled] = useState(false);
+  const [classicFeedback, setClassicFeedback] = useState<"win" | "lose" | null>(null);
+  const [videoFeedback, setVideoFeedback] = useState<"win" | "lose" | null>(null);
   
   // Modais
   const [showPaytable, setShowPaytable] = useState(false);
@@ -258,13 +254,49 @@ export default function SlotsGame({
   const [historyTab, setHistoryTab] = useState<"history" | "provablyFair">("history");
   const [showBuyBonus, setShowBuyBonus] = useState(false);
   const [clientSeed, setClientSeed] = useState("a1b2c3d4e5f6");
-  const [nonce, setNonce] = useState(1247);
+  const [nonce, setNonce] = useState(0);
   const [copiedSeed, setCopiedSeed] = useState(false);
-  const serverSeedHash = "8f14e45fceea167a5a36dedd4bea2543b09a7c12e8f14e45fceea167a5a36dedd";
-  
+  const [serverSeed, setServerSeed] = useState("");
+  const [serverSeedHash, setServerSeedHash] = useState("carregando...");
+  const [lastSpinResult, setLastSpinResult] = useState<SpinResult | null>(null);
+
   // Refs
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const countUpRef = useRef<number | null>(null);
+  const fsSpinRef = useRef<() => void>(() => {});
+
+  // Provably Fair — sessao real (browser mock ou server)
+  useEffect(() => {
+    createProvablyFairSession().then(session => {
+      setServerSeed(session.serverSeed);
+      setServerSeedHash(session.serverSeedHash);
+      setClientSeed(session.clientSeed);
+      setNonce(0);
+    });
+  }, []);
+  
+  // Sons — 16 arquivos em public/assets/sounds/slots/
+  const soundCacheRef = useRef<Record<string, HTMLAudioElement>>({});
+  const playSound = useCallback((name: string, volume = 0.5) => {
+    try {
+      const path = `/assets/sounds/slots/${name}.mp3`;
+      if (!soundCacheRef.current[name]) {
+        soundCacheRef.current[name] = new Audio(path);
+      }
+      const audio = soundCacheRef.current[name];
+      audio.volume = Math.min(1, Math.max(0, volume));
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch (_) {}
+  }, []);
+  
+  const playWinSound = useCallback((amount: number, betVal: number) => {
+    const ratio = amount / betVal;
+    if (ratio >= 50) playSound("win_mega", 0.7);
+    else if (ratio >= 15) playSound("win_big", 0.6);
+    else if (ratio >= 5) playSound("win_medium", 0.5);
+    else playSound("win_small", 0.4);
+  }, [playSound]);
   
   // Gerar reels classicos (3 reels, cada um com 3 simbolos visiveis)
   const generateClassicReels = useCallback(() => {
@@ -307,183 +339,115 @@ export default function SlotsGame({
     }
   }, [generateClassicReels]);
   
-  const handleSpin = useCallback(() => {
+  const handleSpin = useCallback(async () => {
     if (isSpinning || bet > saldo) return;
-    
-    // Deduzir aposta
+
     const totalBet = anteBet ? Math.floor(bet * 1.25) : bet;
     setSaldo(saldo - totalBet);
-    
-    // Contribuir para jackpot (1.5%)
-    setJackpotPool(prev => prev + Math.floor(totalBet * 0.015));
-    
     setIsSpinning(true);
     setScreen("spinning");
     setCurrentWin(0);
     setTumbleCount(0);
     setShowWinHighlight(false);
-    
-    // Simular spin com stagger por coluna
-    const spinDuration = turboMode ? 800 : 1600;
-    
-    spinTimeoutRef.current = setTimeout(() => {
-      // Gerar novo grid
-      const newGrid = generateMockGrid();
-      setGrid(newGrid);
-      
-      // Simular chance de win (70% para demo)
-      const hasWin = Math.random() < 0.7;
-      
-      if (hasWin) {
-        // Gerar posicoes vencedoras
-        const positions = generateWinningPositions();
-        setWinningPositions(positions);
-        setShowWinHighlight(true);
-        setTumbleCount(1);
-        
-        // Calcular win
-        const winAmount = Math.floor(bet * (1 + Math.random() * 3));
-        setCurrentWin(winAmount);
-        
-        // Simular tumble
-        setTimeout(() => {
-          // Chance de FS trigger (10% quando win, 20% com ante)
-          const fsTriggerChance = anteBet ? 0.2 : 0.1;
-          if (Math.random() < fsTriggerChance) {
-            setScreen("fsTrigger");
-            setFreeSpinsTotal(10);
-            setFreeSpinsRemaining(10);
-            setFsMultiplier(1);
-            setFsTotalWin(0);
-          } else {
-            // Continuar tumble ou finalizar
+    playSound("spin_start", 0.4);
+
+    const currentNonce = nonce;
+    setNonce(prev => prev + 1);
+
+    const isFS = screen === "fsPlaying" || freeSpinsRemaining > 0;
+
+    try {
+      const { result, newJackpotPool } = await executeVideoSpin(
+        bet, anteBet, serverSeed, clientSeed, currentNonce, isFS, jackpotPool
+      );
+      setJackpotPool(newJackpotPool);
+      setLastSpinResult(result);
+
+      // Atraso de animacao do spin
+      const spinDuration = turboMode ? 800 : 1600;
+      spinTimeoutRef.current = setTimeout(() => {
+        // Converter grid da engine para formato visual
+        const engineGrid = result.initialGrid;
+        const visualGrid = engineGrid.map((col: GridCell[]) =>
+          col.map((cell: GridCell) => ({
+            id: cell.symbol.id,
+            path: cell.symbol.path,
+            tier: cell.symbol.tier,
+            color: cell.symbol.color,
+          }))
+        );
+        setGrid(visualGrid);
+
+        if (result.tumbleSteps.length > 0) {
+          // Teve win — mostrar posicoes vencedoras
+          const firstStep = result.tumbleSteps[0];
+          const positions = new Set<string>();
+          for (const cluster of firstStep.winClusters) {
+            for (const pos of cluster.positions) {
+              positions.add(`${pos.col}-${pos.row}`);
+            }
+          }
+          setWinningPositions(positions);
+          setShowWinHighlight(true);
+          setTumbleCount(result.tumbleSteps.length);
+          playSound("tumble_drop", 0.3);
+          setCurrentWin(result.totalWin);
+          playWinSound(result.totalWin, bet);
+          setVideoFeedback("win");
+          setTimeout(() => setVideoFeedback(null), 1600);
+
+          // FS trigger
+          if (result.triggeredFreeSpins && !isFS) {
             setTimeout(() => {
+              playSound("free_spins_trigger", 0.6);
+              setScreen("fsTrigger");
+              setFreeSpinsTotal(result.freeSpinsAwarded);
+              setFreeSpinsRemaining(result.freeSpinsAwarded);
+              setFsMultiplier(1);
+              setFsTotalWin(0);
+              setIsSpinning(false);
+            }, turboMode ? 600 : 1200);
+          } else {
+            // Win overlay ou voltar ao idle
+            setTimeout(() => {
+              const ratio = result.totalWin / bet;
               setShowWinHighlight(false);
               setWinningPositions(new Set());
-              setSaldo(prev => prev + winAmount);
+              setSaldo(prev => prev + result.totalWin);
+
+              if (ratio >= 5) {
+                setWinOverlayData({ amount: result.totalWin, ratio });
+                setScreen("winOverlay");
+              } else {
+                setScreen(isFS ? "fsPlaying" : "videoIdle");
+              }
               setIsSpinning(false);
-              setScreen("videoIdle");
             }, turboMode ? 400 : 800);
           }
-        }, turboMode ? 600 : 1200);
-      } else {
-        // Sem win
-        setTimeout(() => {
-          setIsSpinning(false);
-          setScreen("videoIdle");
-        }, turboMode ? 200 : 400);
-      }
-    }, spinDuration);
-  }, [isSpinning, bet, saldo, anteBet, turboMode, setSaldo]);
+        } else {
+          // Sem win
+          setVideoFeedback("lose");
+          setTimeout(() => setVideoFeedback(null), 1600);
+          setTimeout(() => {
+            setIsSpinning(false);
+            setScreen(isFS ? "fsPlaying" : "videoIdle");
+          }, turboMode ? 200 : 400);
+        }
+      }, spinDuration);
+    } catch (err) {
+      // Fallback: devolver aposta se engine falhar
+      setSaldo(prev => prev + totalBet);
+      setIsSpinning(false);
+      setScreen("videoIdle");
+    }
+  }, [isSpinning, bet, saldo, anteBet, turboMode, setSaldo, nonce, serverSeed, clientSeed, jackpotPool, screen, freeSpinsRemaining]);
   
   const handleFSStart = useCallback(() => {
     setScreen("fsPlaying");
-    // Simular primeiro FS spin
-    setTimeout(() => {
-      handleFSSpin();
-    }, 500);
+    setTimeout(() => fsSpinRef.current(), 500);
   }, []);
   
-  // Free Spin handler
-  const handleFSSpin = useCallback(() => {
-    if (freeSpinsRemaining <= 0) return;
-    
-    setIsSpinning(true);
-    setShowWinHighlight(false);
-    setWinningPositions(new Set());
-    
-    const spinDuration = turboMode ? 800 : 1600;
-    
-    spinTimeoutRef.current = setTimeout(() => {
-      const newGrid = generateMockGrid();
-      setGrid(newGrid);
-      
-      // Simular win (80% chance em FS)
-      const hasWin = Math.random() < 0.8;
-      
-      if (hasWin) {
-        const positions = generateWinningPositions();
-        setWinningPositions(positions);
-        setShowWinHighlight(true);
-        setTumbleCount(1);
-        
-        // Calcular win com multiplicador
-        const baseWin = Math.floor(bet * (1 + Math.random() * 4));
-        const finalWin = baseWin * fsMultiplier;
-        setCurrentWin(finalWin);
-        setFsTotalWin(prev => prev + finalWin);
-        
-        // Chance de adicionar multiplicador (orbe)
-        if (Math.random() < 0.3) {
-          const orbValue = [2, 3, 5, 10][Math.floor(Math.random() * 4)];
-          setFsMultiplier(prev => prev + orbValue);
-        }
-        
-        setTimeout(() => {
-          setShowWinHighlight(false);
-          setWinningPositions(new Set());
-          setFreeSpinsRemaining(prev => prev - 1);
-          setIsSpinning(false);
-          
-          // Verificar se FS terminou
-          if (freeSpinsRemaining <= 1) {
-            // Mostrar win overlay se ganhou
-            if (fsTotalWin + finalWin > 0) {
-              const totalWin = fsTotalWin + finalWin;
-              const ratio = totalWin / bet;
-              
-              if (ratio >= 5) {
-                setWinOverlayData({ amount: totalWin, ratio });
-                setScreen("winOverlay");
-                startCountUp(totalWin, ratio);
-              } else {
-                setSaldo(prev => prev + totalWin);
-                setScreen("videoIdle");
-                setFsMultiplier(1);
-                setFsTotalWin(0);
-              }
-            } else {
-              setScreen("videoIdle");
-              setFsMultiplier(1);
-              setFsTotalWin(0);
-            }
-          } else {
-            // Proximo FS spin automatico
-            setTimeout(() => handleFSSpin(), turboMode ? 400 : 800);
-          }
-        }, turboMode ? 600 : 1200);
-      } else {
-        setTimeout(() => {
-          setFreeSpinsRemaining(prev => prev - 1);
-          setIsSpinning(false);
-          
-          if (freeSpinsRemaining <= 1) {
-            if (fsTotalWin > 0) {
-              const ratio = fsTotalWin / bet;
-              if (ratio >= 5) {
-                setWinOverlayData({ amount: fsTotalWin, ratio });
-                setScreen("winOverlay");
-                startCountUp(fsTotalWin, ratio);
-              } else {
-                setSaldo(prev => prev + fsTotalWin);
-                setScreen("videoIdle");
-                setFsMultiplier(1);
-                setFsTotalWin(0);
-              }
-            } else {
-              setScreen("videoIdle");
-              setFsMultiplier(1);
-              setFsTotalWin(0);
-            }
-          } else {
-            setTimeout(() => handleFSSpin(), turboMode ? 400 : 800);
-          }
-        }, turboMode ? 200 : 400);
-      }
-    }, spinDuration);
-  }, [freeSpinsRemaining, turboMode, bet, fsMultiplier, fsTotalWin, setSaldo]);
-  
-  // Win countup animation
+  // Win countup animation (precisa estar ANTES de handleFSSpin)
   const startCountUp = useCallback((targetValue: number, ratio: number) => {
     const duration = ratio >= 500 ? 4000 : ratio >= 50 ? 3000 : 2000;
     const startTime = performance.now();
@@ -492,7 +456,7 @@ export default function SlotsGame({
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 4); // quartic ease-out
+      const eased = 1 - Math.pow(1 - progress, 4);
       
       setCountUpValue(Math.floor(targetValue * eased));
       
@@ -503,6 +467,115 @@ export default function SlotsGame({
     
     countUpRef.current = requestAnimationFrame(animate);
   }, []);
+
+  // Free Spin handler — usa ref pra recursao sem closure stale
+  const handleFSSpin = useCallback(() => {
+    setFreeSpinsRemaining(prev => {
+      if (prev <= 0) return prev;
+      
+      setIsSpinning(true);
+      setShowWinHighlight(false);
+      setWinningPositions(new Set());
+      
+      const spinDur = turboMode ? 800 : 1600;
+      
+      spinTimeoutRef.current = setTimeout(() => {
+        const newGrid = generateMockGrid();
+        setGrid(newGrid);
+        
+        const hasWin = Math.random() < 0.8;
+        
+        if (hasWin) {
+          const positions = generateWinningPositions();
+          setWinningPositions(positions);
+          setShowWinHighlight(true);
+          setTumbleCount(1);
+          
+          const baseWin = Math.floor(bet * (1 + Math.random() * 4));
+          setFsMultiplier(curMulti => {
+            const finalWin = baseWin * curMulti;
+            setCurrentWin(finalWin);
+            setFsTotalWin(curTotal => {
+              const newTotal = curTotal + finalWin;
+              
+              setTimeout(() => {
+                setShowWinHighlight(false);
+                setWinningPositions(new Set());
+                setIsSpinning(false);
+                
+                if (prev <= 1) {
+                  if (newTotal > 0) {
+                    const ratio = newTotal / bet;
+                    if (ratio >= 5) {
+                      setWinOverlayData({ amount: newTotal, ratio });
+                      setScreen("winOverlay");
+                      startCountUp(newTotal, ratio);
+                    } else {
+                      setSaldo(s => s + newTotal);
+                      setScreen("videoIdle");
+                      setFsMultiplier(1);
+                      setFsTotalWin(0);
+                    }
+                  } else {
+                    setScreen("videoIdle");
+                    setFsMultiplier(1);
+                    setFsTotalWin(0);
+                  }
+                } else {
+                  setTimeout(() => fsSpinRef.current(), turboMode ? 400 : 800);
+                }
+              }, turboMode ? 600 : 1200);
+              
+              return newTotal;
+            });
+            
+            // Chance de subir multiplicador
+            if (Math.random() < 0.3) {
+              const orbVal = [2, 3, 5, 10][Math.floor(Math.random() * 4)];
+              return curMulti + orbVal;
+            }
+            return curMulti;
+          });
+        } else {
+          setTimeout(() => {
+            setIsSpinning(false);
+            
+            if (prev <= 1) {
+              setFsTotalWin(curTotal => {
+                if (curTotal > 0) {
+                  const ratio = curTotal / bet;
+                  if (ratio >= 5) {
+                    setWinOverlayData({ amount: curTotal, ratio });
+                    setScreen("winOverlay");
+                    startCountUp(curTotal, ratio);
+                  } else {
+                    setSaldo(s => s + curTotal);
+                    setScreen("videoIdle");
+                    setFsMultiplier(1);
+                    setFsTotalWin(0);
+                  }
+                } else {
+                  setScreen("videoIdle");
+                  setFsMultiplier(1);
+                  setFsTotalWin(0);
+                }
+                return curTotal;
+              });
+            } else {
+              setTimeout(() => fsSpinRef.current(), turboMode ? 400 : 800);
+            }
+          }, turboMode ? 200 : 400);
+        }
+      }, spinDur);
+      
+      return prev - 1;
+    });
+  }, [turboMode, bet, setSaldo, startCountUp]);
+  
+  // Manter ref atualizado
+  useEffect(() => {
+    fsSpinRef.current = handleFSSpin;
+  }, [handleFSSpin]);
   
   // Win overlay continue
   const handleWinContinue = useCallback(() => {
@@ -518,70 +591,72 @@ export default function SlotsGame({
   }, [winOverlayData, setSaldo]);
   
   // Classic Spin handler
-  const handleClassicSpin = useCallback(() => {
+  const handleClassicSpin = useCallback(async () => {
     if (classicSpinning.some(s => s) || bet > saldo) return;
-    
+
     const totalBet = bet;
     setSaldo(saldo - totalBet);
     setJackpotPool(prev => prev + Math.floor(totalBet * 0.015));
-    
     setCurrentWin(0);
     setClassicSpinning([true, true, true]);
     setClassicStopped([false, false, false]);
     setScreen("classicSpinning");
-    
-    // Stagger stop times: 1.0s, 1.4s, 2.2s (turbo: * 0.5)
-    const baseTimes = turboMode ? [500, 700, 1100] : [1000, 1400, 2200];
-    
-    // Gerar resultados finais
-    const finalReels = generateClassicReels();
-    
-    baseTimes.forEach((time, reelIndex) => {
-      setTimeout(() => {
-        setClassicReels(prev => {
-          const newReels = [...prev];
-          newReels[reelIndex] = finalReels[reelIndex];
-          return newReels;
-        });
-        setClassicSpinning(prev => {
-          const newSpinning = [...prev];
-          newSpinning[reelIndex] = false;
-          return newSpinning;
-        });
-        setClassicStopped(prev => {
-          const newStopped = [...prev];
-          newStopped[reelIndex] = true;
-          return newStopped;
-        });
-        
-        // Quando todos pararem
-        if (reelIndex === 2) {
-          setTimeout(() => {
-            setScreen("classicIdle");
-            
-            // Verificar win (linha central)
-            const centerSymbols = finalReels.map(reel => reel[1].id);
-            const allMatch = centerSymbols.every(s => s === centerSymbols[0]);
-            
-            if (allMatch) {
-              // Win! Multiplicador baseado no simbolo
-              const multipliers: Record<string, number> = {
-                seven: 50, bar: 25, diamond: 15, bell: 10, cherry: 8, star: 5, lemon: 3
-              };
-              const winAmount = bet * (multipliers[centerSymbols[0]] || 5);
-              setCurrentWin(winAmount);
-              setSaldo(prev => prev + winAmount);
-            }
-          }, 200);
-        }
-      }, time);
-    });
-  }, [classicSpinning, bet, saldo, turboMode, setSaldo, generateClassicReels]);
+    playSound("spin_start", 0.4);
+
+    const currentNonce = nonce;
+    setNonce(prev => prev + 1);
+
+    try {
+      const classicResult = await executeClassicSpin(bet, serverSeed, clientSeed, currentNonce);
+      const baseTimes = turboMode ? [500, 700, 1100] : [1000, 1400, 2200];
+
+      // Converter resultado da engine para formato visual
+      const finalReels = classicResult.visibleReels.map(reel =>
+        reel.map(sym => ({
+          id: sym.id, path: sym.path, color: sym.color,
+          weight: sym.weight, payout3: sym.payout3, payout2: sym.payout2,
+        }))
+      );
+
+      baseTimes.forEach((time, reelIndex) => {
+        setTimeout(() => {
+          setClassicReels(prev => {
+            const newReels = [...prev];
+            newReels[reelIndex] = finalReels[reelIndex];
+            return newReels;
+          });
+          setClassicSpinning(prev => {
+            const ns = [...prev]; ns[reelIndex] = false; return ns;
+          });
+          setClassicStopped(prev => {
+            const ns = [...prev]; ns[reelIndex] = true; return ns;
+          });
+
+          if (reelIndex === 2) {
+            setTimeout(() => {
+              setScreen("classicIdle");
+              if (classicResult.totalWin > 0) {
+                setCurrentWin(classicResult.totalWin);
+                setSaldo(prev => prev + classicResult.totalWin);
+                setClassicFeedback("win");
+                playWinSound(classicResult.totalWin, bet);
+              } else {
+                setClassicFeedback("lose");
+              }
+              playSound("reel_stop", 0.3);
+              setTimeout(() => setClassicFeedback(null), 1800);
+            }, 200);
+          }
+        }, time);
+      });
+    } catch (_) {
+      setSaldo(prev => prev + totalBet);
+      setClassicSpinning([false, false, false]);
+      setScreen("classicIdle");
+    }
+  }, [classicSpinning, bet, saldo, turboMode, setSaldo, nonce, serverSeed, clientSeed]);
   
   const handleBetChange = useCallback((action: "min" | "half" | "double" | "max") => {
-    const MIN_BET = 1;
-    const MAX_BET = 1000;
-    
     switch (action) {
       case "min":
         setBet(MIN_BET);
@@ -606,18 +681,32 @@ export default function SlotsGame({
   }, [serverSeedHash]);
   
   // Buy bonus (100x bet)
-  const handleBuyBonus = useCallback(() => {
-    const cost = bet * 100;
+  const handleBuyBonus = useCallback(async () => {
+    const cost = bet * BUY_BONUS_MULTIPLIER;
     if (cost > saldo) return;
-    
+
     setSaldo(saldo - cost);
     setShowBuyBonus(false);
-    setFreeSpinsRemaining(10);
-    setFreeSpinsTotal(10);
-    setFsMultiplier(1);
-    setFsTotalWin(0);
-    setScreen("fsTrigger");
-  }, [bet, saldo, setSaldo]);
+    playSound("buy_bonus", 0.5);
+
+    const currentNonce = nonce;
+    setNonce(prev => prev + 1);
+
+    try {
+      const { result, newJackpotPool } = await executeBuyBonus(
+        bet, serverSeed, clientSeed, currentNonce, jackpotPool
+      );
+      setJackpotPool(newJackpotPool);
+      setLastSpinResult(result);
+      setFreeSpinsRemaining(result.freeSpinsAwarded);
+      setFreeSpinsTotal(result.freeSpinsAwarded);
+      setFsMultiplier(1);
+      setFsTotalWin(0);
+      setScreen("fsTrigger");
+    } catch (_) {
+      setSaldo(prev => prev + cost);
+    }
+  }, [bet, saldo, setSaldo, nonce, serverSeed, clientSeed, jackpotPool]);
 
   // ==========================================================================
   // RENDER HELPERS
@@ -628,6 +717,8 @@ export default function SlotsGame({
   // ==========================================================================
   // TELA 1 - MODE SELECT
   // ==========================================================================
+
+  const [hoveredMode, setHoveredMode] = useState<"classic" | "video" | null>(null);
 
   const renderModeSelect = () => (
     <motion.div
@@ -691,119 +782,129 @@ export default function SlotsGame({
           whileHover={{ y: -6, scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => handleModeSelect("classic")}
+          onMouseEnter={() => setHoveredMode("classic")}
+          onMouseLeave={() => setHoveredMode(null)}
           title={t("playClassicTooltip")}
           style={{
             width: "clamp(180px, 28vw, 280px)",
-            aspectRatio: "1",
-            borderRadius: 14,
-            border: "2px solid rgba(212,168,67,0.3)",
-            background: "rgba(5,5,5,0.95)",
-            boxShadow: "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)",
             cursor: "pointer",
             position: "relative",
             overflow: "hidden",
-            transition: "border 0.3s ease, box-shadow 0.3s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.7)";
-            e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.5), 0 0 15px rgba(212,168,67,0.15), inset 0 1px 0 rgba(255,215,0,0.15), inset 0 0 20px rgba(0,0,0,0.5)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.3)";
-            e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)";
+            borderRadius: 4,
           }}
         >
-          {/* Imagem preenche tudo */}
-          <img
+          <motion.img
             src="/assets/games/slots/mode-classic.png"
             alt="Classic Slot"
+            animate={{ scale: hoveredMode === "classic" ? 1.08 : 1 }}
+            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             style={{
-              position: "absolute",
-              inset: 0,
               width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              borderRadius: 12,
-              zIndex: 0,
+              height: "auto",
+              display: "block",
             }}
           />
-          {/* Glow corner top-left */}
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "clamp(30px, 5vw, 60px)",
-              height: "clamp(30px, 5vw, 60px)",
-              background: "radial-gradient(circle at 0% 0%, rgba(255,215,0,0.2) 0%, transparent 70%)",
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          />
-          {/* Glow corner bottom-right */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
-              width: "clamp(30px, 5vw, 60px)",
-              height: "clamp(30px, 5vw, 60px)",
-              background: "radial-gradient(circle at 100% 100%, rgba(212,168,67,0.15) 0%, transparent 70%)",
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          />
-          {/* Borda glow externa */}
-          <div
-            style={{
-              position: "absolute",
-              inset: -2,
-              borderRadius: 16,
-              boxShadow: "0 0 10px rgba(255,215,0,0.12), 0 0 20px rgba(212,168,67,0.05)",
-              pointerEvents: "none",
-              zIndex: 3,
-            }}
-          />
-          {/* Hover overlay com descricao */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: 12,
-              background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,0.95) 100%)",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-end",
-              padding: "clamp(12px, 2vw, 20px)",
-              zIndex: 4,
-              opacity: 1,
-              transition: "opacity 0.3s ease",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Cinzel', serif",
-                fontWeight: 700,
-                fontSize: "clamp(14px, 1.8vw, 20px)",
-                color: "#D4A843",
-                textTransform: "uppercase",
-                letterSpacing: 2,
-                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
-              }}
-            >
-              {t("classic")}
-            </span>
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "clamp(9px, 1.1vw, 13px)",
-                color: "#A8A8A8",
-                marginTop: 4,
-              }}
-            >
-              {t("classicDesc")}
-            </span>
-          </div>
+
+          <AnimatePresence>
+            {hoveredMode === "classic" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "radial-gradient(ellipse at 50% 30%, rgba(212,168,67,0.06) 0%, rgba(0,0,0,0.96) 40%, rgba(0,0,0,0.98) 100%)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "clamp(16px, 3vw, 28px)",
+                  zIndex: 4,
+                  gap: "clamp(8px, 1.2vw, 14px)",
+                }}
+              >
+                <motion.span
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.3 }}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontWeight: 900,
+                    fontSize: "clamp(20px, 3.2vw, 32px)",
+                    color: "#FFD700",
+                    textTransform: "uppercase",
+                    letterSpacing: 5,
+                    textShadow: "0 0 20px rgba(255,215,0,0.7), 0 0 50px rgba(255,215,0,0.3), 0 2px 8px rgba(0,0,0,0.9)",
+                    textAlign: "center",
+                  }}
+                >
+                  {t("classic")}
+                </motion.span>
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
+                  style={{
+                    width: "clamp(40px, 8vw, 70px)",
+                    height: 1,
+                    background: "linear-gradient(90deg, transparent, #F6E27A, #D4A843, #F6E27A, transparent)",
+                  }}
+                />
+                <motion.p
+                  initial={{ y: 8, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.25, duration: 0.3 }}
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "clamp(10px, 1.2vw, 13px)",
+                    color: "rgba(246,226,122,0.75)",
+                    lineHeight: 1.7,
+                    textAlign: "center",
+                    maxWidth: "85%",
+                    letterSpacing: 0.4,
+                    fontStyle: "italic",
+                    margin: 0,
+                  }}
+                >
+                  {lang === "br"
+                    ? "3 rolos classicos com paylines tradicionais e simbolos iconicos de Las Vegas. Rapido, nostalgico."
+                    : "3 classic reels with traditional paylines and iconic Las Vegas symbols. Fast, nostalgic."}
+                </motion.p>
+                <motion.div
+                  initial={{ y: 6, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.35, duration: 0.3 }}
+                  style={{
+                    display: "flex",
+                    gap: "clamp(4px, 0.6vw, 8px)",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    marginTop: "clamp(2px, 0.3vw, 4px)",
+                  }}
+                >
+                  {["3 Reels", "Paylines", lang === "br" ? "Rapido" : "Fast"].map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "clamp(7px, 0.9vw, 10px)",
+                        color: "#D4A843",
+                        border: "1px solid rgba(212,168,67,0.25)",
+                        borderRadius: 4,
+                        padding: "clamp(2px, 0.3vw, 3px) clamp(6px, 0.8vw, 10px)",
+                        textTransform: "uppercase",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Video Card */}
@@ -814,124 +915,133 @@ export default function SlotsGame({
           whileHover={{ y: -6, scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => handleModeSelect("video")}
+          onMouseEnter={() => setHoveredMode("video")}
+          onMouseLeave={() => setHoveredMode(null)}
           title={t("playVideoTooltip")}
           style={{
             width: "clamp(180px, 28vw, 280px)",
-            aspectRatio: "1",
-            borderRadius: 14,
-            border: "2px solid rgba(212,168,67,0.3)",
-            background: "rgba(5,5,5,0.95)",
-            boxShadow: "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)",
             cursor: "pointer",
             position: "relative",
             overflow: "hidden",
-            transition: "border 0.3s ease, box-shadow 0.3s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.7)";
-            e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.5), 0 0 15px rgba(212,168,67,0.15), inset 0 1px 0 rgba(255,215,0,0.15), inset 0 0 20px rgba(0,0,0,0.5)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.border = "2px solid rgba(212,168,67,0.3)";
-            e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,215,0,0.08), inset 0 0 15px rgba(0,0,0,0.4)";
+            borderRadius: 4,
           }}
         >
-          {/* Imagem preenche tudo */}
-          <img
+          <motion.img
             src="/assets/games/slots/mode-video.png"
             alt="Video Slot"
+            animate={{ scale: hoveredMode === "video" ? 1.08 : 1 }}
+            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             style={{
-              position: "absolute",
-              inset: 0,
               width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              borderRadius: 12,
-              zIndex: 0,
+              height: "auto",
+              display: "block",
             }}
           />
-          {/* Glow corner top-left */}
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "clamp(30px, 5vw, 60px)",
-              height: "clamp(30px, 5vw, 60px)",
-              background: "radial-gradient(circle at 0% 0%, rgba(255,215,0,0.2) 0%, transparent 70%)",
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          />
-          {/* Glow corner bottom-right */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
-              width: "clamp(30px, 5vw, 60px)",
-              height: "clamp(30px, 5vw, 60px)",
-              background: "radial-gradient(circle at 100% 100%, rgba(212,168,67,0.15) 0%, transparent 70%)",
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          />
-          {/* Borda glow externa */}
-          <div
-            style={{
-              position: "absolute",
-              inset: -2,
-              borderRadius: 16,
-              boxShadow: "0 0 10px rgba(255,215,0,0.12), 0 0 20px rgba(212,168,67,0.05)",
-              pointerEvents: "none",
-              zIndex: 3,
-            }}
-          />
-          {/* Hover overlay com descricao */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: 12,
-              background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,0.95) 100%)",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-end",
-              padding: "clamp(12px, 2vw, 20px)",
-              zIndex: 4,
-              opacity: 1,
-              transition: "opacity 0.3s ease",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Cinzel', serif",
-                fontWeight: 700,
-                fontSize: "clamp(14px, 1.8vw, 20px)",
-                color: "#D4A843",
-                textTransform: "uppercase",
-                letterSpacing: 2,
-                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
-              }}
-            >
-              {t("video")}
-            </span>
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "clamp(9px, 1.1vw, 13px)",
-                color: "#A8A8A8",
-                marginTop: 4,
-              }}
-            >
-              {t("videoDesc")}
-            </span>
-          </div>
+
+          <AnimatePresence>
+            {hoveredMode === "video" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "radial-gradient(ellipse at 50% 30%, rgba(212,168,67,0.06) 0%, rgba(0,0,0,0.96) 40%, rgba(0,0,0,0.98) 100%)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "clamp(16px, 3vw, 28px)",
+                  zIndex: 4,
+                  gap: "clamp(8px, 1.2vw, 14px)",
+                }}
+              >
+                <motion.span
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.3 }}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontWeight: 900,
+                    fontSize: "clamp(20px, 3.2vw, 32px)",
+                    color: "#FFD700",
+                    textTransform: "uppercase",
+                    letterSpacing: 5,
+                    textShadow: "0 0 20px rgba(255,215,0,0.7), 0 0 50px rgba(255,215,0,0.3), 0 2px 8px rgba(0,0,0,0.9)",
+                    textAlign: "center",
+                  }}
+                >
+                  {t("video")}
+                </motion.span>
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
+                  style={{
+                    width: "clamp(40px, 8vw, 70px)",
+                    height: 1,
+                    background: "linear-gradient(90deg, transparent, #F6E27A, #D4A843, #F6E27A, transparent)",
+                  }}
+                />
+                <motion.p
+                  initial={{ y: 8, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.25, duration: 0.3 }}
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "clamp(10px, 1.2vw, 13px)",
+                    color: "rgba(246,226,122,0.75)",
+                    lineHeight: 1.7,
+                    textAlign: "center",
+                    maxWidth: "85%",
+                    letterSpacing: 0.4,
+                    fontStyle: "italic",
+                    margin: 0,
+                  }}
+                >
+                  {lang === "br"
+                    ? "Grid 6x5 com Scatter Pays e Tumble Cascade. Multiplicadores acumulados, Free Spins e Buy Bonus."
+                    : "6x5 grid with Scatter Pays and Tumble Cascade. Running multipliers, Free Spins and Buy Bonus."}
+                </motion.p>
+                <motion.div
+                  initial={{ y: 6, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.35, duration: 0.3 }}
+                  style={{
+                    display: "flex",
+                    gap: "clamp(4px, 0.6vw, 8px)",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    marginTop: "clamp(2px, 0.3vw, 4px)",
+                  }}
+                >
+                  {["6x5 Grid", "Tumble", "Free Spins", "Buy Bonus"].map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "clamp(7px, 0.9vw, 10px)",
+                        color: "#D4A843",
+                        border: "1px solid rgba(212,168,67,0.25)",
+                        borderRadius: 4,
+                        padding: "clamp(2px, 0.3vw, 3px) clamp(6px, 0.8vw, 10px)",
+                        textTransform: "uppercase",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </motion.div>
   );
-
   // ==========================================================================
   // TELA 2/3 — VIDEO SLOT (IDLE / SPINNING)
   // ==========================================================================
@@ -962,57 +1072,59 @@ export default function SlotsGame({
             zIndex: 5,
           }}
         >
-          {/* Titulo */}
-          <span
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: "clamp(14px, 2vw, 22px)",
-              color: "#D4A843",
-              textTransform: "uppercase",
-              letterSpacing: "3px",
-              textShadow: "0 0 12px rgba(255,215,0,0.4), 0 2px 4px rgba(0,0,0,0.8)",
+          <motion.button
+            onClick={() => {
+              setScreen("modeSelect");
+              setMode(null);
+              setCurrentWin(0);
             }}
-          >
-            {t("slotMachine")}
-          </span>
-          
-          {/* Jackpot */}
-          <div
-            title={t("jackpotTooltip")}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            title={t("backTooltip")}
             style={{
               display: "flex",
               alignItems: "center",
               gap: "clamp(4px, 0.5vw, 8px)",
+              background: "rgba(0,0,0,0.6)",
+              border: "1px solid rgba(212,168,67,0.4)",
+              borderRadius: 8,
+              padding: "clamp(5px, 0.6vw, 8px) clamp(8px, 1.2vw, 14px)",
+              color: "#D4A843",
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 700,
+              fontSize: "clamp(10px, 1.2vw, 13px)",
+              cursor: "pointer",
+              minHeight: 44,
+              letterSpacing: "2px",
+              textTransform: "uppercase",
             }}
           >
-            <span
-              style={{
-                fontFamily: "'Cinzel', serif",
-                fontWeight: 600,
-                fontSize: "clamp(9px, 1vw, 12px)",
-                color: "#A8A8A8",
-                textTransform: "uppercase",
-                letterSpacing: "1px",
-              }}
-            >
-              {t("jackpot")}:
-            </span>
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontWeight: 700,
-                fontSize: "clamp(11px, 1.4vw, 16px)",
-                color: "#FFD700",
-                textShadow: "0 0 8px rgba(255,215,0,0.5), 0 0 16px rgba(255,215,0,0.2), 0 2px 4px rgba(0,0,0,0.6)",
-              }}
-            >
-              GC {jackpotPool.toLocaleString("pt-BR")}
-            </span>
-          </div>
-          
+            <span style={{ fontSize: "clamp(12px, 1.2vw, 16px)" }}>←</span>
+            {t("back")}
+          </motion.button>
+
+          {/* Titulo centralizado */}
+          <span
+            style={{
+              position: "absolute",
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontFamily: "'Cinzel', serif",
+              fontWeight: 800,
+              fontSize: "clamp(14px, 2.2vw, 24px)",
+              color: "#D4A843",
+              textTransform: "uppercase",
+              letterSpacing: "4px",
+              textShadow: "0 0 15px rgba(255,215,0,0.4), 0 2px 6px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            VIDEO SLOT
+          </span>
+
           {/* Saldo */}
           <div
+            title={t("balanceTooltip")}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1051,21 +1163,19 @@ export default function SlotsGame({
             justifyContent: "center",
             padding: "clamp(8px, 1vw, 16px)",
             minHeight: 0,
+            position: "relative",
           }}
         >
-          {/* Frame Dourado */}
+          {/* Container frame + manivela */}
+          <div style={{ position: "relative", width: "clamp(300px, 70vw, 600px)", margin: "0 auto" }}>
+          {/* Frame — 7 camadas EXATAS do SpotlightLayout */}
           <div
             style={{
               position: "relative",
               margin: "clamp(4px, 0.8vw, 8px) auto",
               padding: "clamp(6px, 1vw, 12px)",
               border: isFS ? "2px solid #FFD700" : "2px solid #D4A843",
-              outline: isFS ? "3px solid rgba(255,215,0,0.25)" : "3px solid rgba(212,168,67,0.15)",
-              outlineOffset: "4px",
               borderRadius: "18px",
-              boxShadow: isFS
-                ? "0 0 8px rgba(255,215,0,0.2), 0 0 20px rgba(255,215,0,0.1), 0 0 40px rgba(255,215,0,0.05), inset 0 0 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,215,0,0.15)"
-                : "0 0 8px rgba(212,168,67,0.15), 0 0 20px rgba(212,168,67,0.08), 0 0 40px rgba(212,168,67,0.04), inset 0 0 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(212,168,67,0.1)",
               background: "linear-gradient(180deg, #0F0F0F 0%, #0A0A0A 100%)",
               width: "clamp(300px, 70vw, 600px)",
               maxHeight: "60vh",
@@ -1073,8 +1183,191 @@ export default function SlotsGame({
               alignItems: "center",
               justifyContent: "center",
               transition: "all 0.5s ease",
+              overflow: "hidden",
             }}
           >
+            {/* CAMADA 1 — SHIMMER SWEEP diagonal (SpotlightLayout L170-184) */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                overflow: "hidden",
+                pointerEvents: "none",
+                zIndex: 4,
+                borderRadius: 18,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-50%",
+                  left: "-50%",
+                  width: "35%",
+                  height: "200%",
+                  background: "linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.06) 40%, rgba(255,255,255,0.08) 50%, rgba(255,215,0,0.06) 60%, transparent 100%)",
+                  animation: "slotsShimmerSweep 5s ease-in-out 0s infinite",
+                }}
+              />
+            </div>
+
+            {/* CAMADA 2 — PARTICULAS douradas (SpotlightLayout L187-210) */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                overflow: "hidden",
+                zIndex: 4,
+                borderRadius: 18,
+              }}
+            >
+              {[
+                { w: 3, bg: "rgba(255,215,0,0.8)", left: "15%", bottom: "25%", dur: 2.5, del: 0.3 },
+                { w: 2.5, bg: "rgba(212,168,67,0.6)", left: "35%", bottom: "40%", dur: 3.2, del: 1.1 },
+                { w: 3.5, bg: "rgba(0,230,118,0.5)", left: "55%", bottom: "20%", dur: 4, del: 0.7 },
+                { w: 2, bg: "rgba(255,215,0,0.8)", left: "75%", bottom: "35%", dur: 2.8, del: 2.1 },
+                { w: 3, bg: "rgba(212,168,67,0.6)", left: "45%", bottom: "55%", dur: 3.5, del: 1.8 },
+                { w: 2.5, bg: "rgba(0,230,118,0.5)", left: "85%", bottom: "30%", dur: 4.2, del: 0.5 },
+              ].map((p, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    width: p.w,
+                    height: p.w,
+                    borderRadius: "50%",
+                    background: p.bg,
+                    left: p.left,
+                    bottom: p.bottom,
+                    animation: `slotsFloatParticle ${p.dur}s ease-in-out ${p.del}s infinite`,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* CAMADA 3 — FEIXES DE LUZ nas bordas (SpotlightLayout L213-264) */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                overflow: "hidden",
+                zIndex: 3,
+                borderRadius: 18,
+              }}
+            >
+              {/* Feixe esquerdo */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "25%",
+                  left: "-2px",
+                  width: "40%",
+                  height: "2px",
+                  background: "linear-gradient(90deg, rgba(255,215,0,0.5), transparent)",
+                  filter: "blur(1px)",
+                  animation: "slotsShimmerSweep 6s ease-in-out 0s infinite",
+                  opacity: 0.6,
+                }}
+              />
+              {/* Feixe direito */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "65%",
+                  right: "-2px",
+                  width: "35%",
+                  height: "2px",
+                  background: "linear-gradient(270deg, rgba(255,215,0,0.5), transparent)",
+                  filter: "blur(1px)",
+                  animation: "slotsShimmerSweep 7s ease-in-out 2s infinite",
+                  opacity: 0.5,
+                }}
+              />
+              {/* Feixe topo */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-2px",
+                  left: "30%",
+                  width: "2px",
+                  height: "30%",
+                  background: "linear-gradient(180deg, rgba(255,215,0,0.4), transparent)",
+                  filter: "blur(1px)",
+                  animation: "slotsShimmerSweep 5s ease-in-out 1s infinite",
+                  opacity: 0.5,
+                }}
+              />
+              {/* Glow corner top-left dourado */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "clamp(30px, 5vw, 60px)",
+                  height: "clamp(30px, 5vw, 60px)",
+                  background: "radial-gradient(circle at 0% 0%, rgba(255,215,0,0.2) 0%, transparent 70%)",
+                  pointerEvents: "none",
+                }}
+              />
+              {/* Glow corner bottom-right verde */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 0,
+                  width: "clamp(30px, 5vw, 60px)",
+                  height: "clamp(30px, 5vw, 60px)",
+                  background: "radial-gradient(circle at 100% 100%, rgba(0,230,118,0.15) 0%, transparent 70%)",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
+
+            {/* CAMADA 4 — BORDA GLOW externa (SpotlightLayout L267-277) */}
+            <div
+              style={{
+                position: "absolute",
+                inset: "-2px",
+                borderRadius: 20,
+                boxShadow: "0 0 18px rgba(255,215,0,0.3), 0 0 40px rgba(0,230,118,0.12)",
+                pointerEvents: "none",
+                zIndex: 3,
+              }}
+            />
+
+            {/* CAMADA 5 — SPOTLIGHT CONE do topo (SpotlightLayout L283-297) */}
+            <div
+              style={{
+                position: "absolute",
+                top: "-10%",
+                left: "10%",
+                right: "10%",
+                height: "70%",
+                background: "conic-gradient(from 250deg at 50% 0%, transparent 0deg, rgba(255,215,0,0.1) 10deg, rgba(255,215,0,0.2) 20deg, rgba(255,215,0,0.1) 30deg, transparent 40deg)",
+                filter: "blur(16px)",
+                animation: "slotsSpotlightBreathe 4s ease-in-out infinite",
+                pointerEvents: "none",
+                zIndex: 3,
+                borderRadius: 18,
+              }}
+            />
+
+            {/* CAMADA 6 — GLOW base inferior (SpotlightLayout L300-312) */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: "5%",
+                right: "5%",
+                height: "50%",
+                background: "radial-gradient(ellipse at 50% 100%, rgba(255,215,0,0.12) 0%, rgba(0,230,118,0.06) 30%, transparent 70%)",
+                pointerEvents: "none",
+                zIndex: 3,
+                borderRadius: "0 0 18px 18px",
+              }}
+            />
+
             {/* Tumble Badge */}
             <AnimatePresence>
               {tumbleCount > 0 && (
@@ -1188,9 +1481,134 @@ export default function SlotsGame({
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Video Win/Lose feedback — estilo arcade stamp */}
+            <AnimatePresence>
+              {videoFeedback && (
+                <motion.div
+                  key={videoFeedback + Date.now()}
+                  initial={{ opacity: 0, scale: 2.5 }}
+                  animate={{ opacity: [0, 1, 1, 1, 0], scale: [2.5, 0.9, 1.05, 1, 1] }}
+                  transition={{ duration: 1.6, times: [0, 0.15, 0.25, 0.35, 1] }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 20,
+                    pointerEvents: "none",
+                    background: videoFeedback === "win"
+                      ? "radial-gradient(ellipse at center, rgba(0,230,118,0.12) 0%, transparent 60%)"
+                      : "radial-gradient(ellipse at center, rgba(255,68,68,0.08) 0%, transparent 60%)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontWeight: 900,
+                      fontSize: "clamp(28px, 6vw, 52px)",
+                      textTransform: "uppercase",
+                      letterSpacing: "clamp(4px, 1vw, 8px)",
+                      color: videoFeedback === "win" ? "#00E676" : "#FF4444",
+                      textShadow: videoFeedback === "win"
+                        ? "0 0 30px rgba(0,230,118,0.8), 0 0 60px rgba(0,230,118,0.4), 0 4px 12px rgba(0,0,0,0.9)"
+                        : "0 0 30px rgba(255,68,68,0.6), 0 0 60px rgba(255,68,68,0.3), 0 4px 12px rgba(0,0,0,0.9)",
+                      WebkitTextStroke: "1px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {videoFeedback === "win"
+                      ? (lang === "br" ? "GANHOU!" : "YOU WIN!")
+                      : (lang === "br" ? "SEM SORTE" : "NO LUCK")}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* MANIVELA Video (colada na borda direita do frame) */}
+          <motion.div
+            onClick={handleSpin}
+            whileHover={{ scale: 1.05 }}
+            title={t("spinTooltip")}
+            style={{
+              position: "absolute",
+              right: "clamp(-28px, -3.5vw, -36px)",
+              top: "35%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              cursor: isSpinning || bet > saldo ? "not-allowed" : "pointer",
+              zIndex: 10,
+              opacity: isSpinning ? 0.4 : 1,
+              transition: "opacity 0.3s ease",
+            }}
+          >
+            <motion.div
+              animate={{ y: isSpinning ? 40 : 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              style={{
+                width: "clamp(20px, 3vw, 28px)",
+                height: "clamp(20px, 3vw, 28px)",
+                borderRadius: "50%",
+                background: "radial-gradient(circle at 35% 35%, #F6E27A, #D4A843, #8B6914)",
+                boxShadow: "0 0 10px rgba(212,168,67,0.4), inset 0 -2px 4px rgba(0,0,0,0.3)",
+                marginBottom: 4,
+                zIndex: 2,
+              }}
+            />
+            <div
+              style={{
+                width: "clamp(8px, 1vw, 12px)",
+                height: "clamp(80px, 12vh, 120px)",
+                background: "linear-gradient(90deg, #8B6914, #D4A843, #8B6914)",
+                borderRadius: 4,
+                boxShadow: "2px 0 6px rgba(0,0,0,0.4)",
+              }}
+            />
+            <div
+              style={{
+                width: "clamp(16px, 2vw, 22px)",
+                height: "clamp(6px, 0.8vw, 10px)",
+                background: "linear-gradient(180deg, #D4A843, #8B6914)",
+                borderRadius: "0 0 4px 4px",
+              }}
+            />
+          </motion.div>
           </div>
           
-          {/* Win Display */}
+          {/* Jackpot + Win Display */}
+          <div
+            title={t("jackpotTooltip")}
+            style={{
+              textAlign: "center",
+              padding: "clamp(2px, 0.3vw, 4px)",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 600,
+                fontSize: "clamp(8px, 0.9vw, 11px)",
+                color: "rgba(212,168,67,0.5)",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              {t("jackpot")}:{" "}
+            </span>
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700,
+                fontSize: "clamp(10px, 1.3vw, 15px)",
+                color: "#FFD700",
+                textShadow: "0 0 8px rgba(255,215,0,0.4)",
+              }}
+            >
+              GC {jackpotPool.toLocaleString("pt-BR")}
+            </span>
+          </div>
           <div
             style={{
               textAlign: "center",
@@ -1668,6 +2086,7 @@ export default function SlotsGame({
         flex: 1,
         minHeight: 0,
         position: "relative",
+        overflow: "hidden",
       }}
     >
       {/* Tint dourado sutil */}
@@ -1681,94 +2100,105 @@ export default function SlotsGame({
         }}
       />
       
-      {/* Header do jogo com titulo */}
+      {/* HUD Free Spins — com botao voltar (pede confirmacao) */}
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          gap: "clamp(8px, 1.2vw, 16px)",
           alignItems: "center",
-          padding: "clamp(6px, 0.8vw, 10px) clamp(8px, 1.5vw, 16px)",
-          borderBottom: "1px solid rgba(255,215,0,0.2)",
+          justifyContent: "center",
+          padding: "clamp(8px, 1vw, 14px) clamp(12px, 2vw, 24px)",
+          background: "linear-gradient(180deg, rgba(212,168,67,0.18), rgba(212,168,67,0.06))",
+          borderBottom: "2px solid rgba(255,215,0,0.3)",
           flexShrink: 0,
           zIndex: 5,
+          flexWrap: "wrap",
         }}
       >
-        <span
+        {/* Botao Voltar com confirmacao */}
+        <motion.button
+          onClick={() => {
+            if (fsExitConfirm) {
+              setScreen("videoIdle");
+              setFreeSpinsRemaining(0);
+              setFsMultiplier(1);
+              setFsTotalWin(0);
+              setCurrentWin(0);
+              setIsSpinning(false);
+              setFsExitConfirm(false);
+            } else {
+              setFsExitConfirm(true);
+              setTimeout(() => setFsExitConfirm(false), 3000);
+            }
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title={lang === "br" ? "Voltar (perde free spins restantes)" : "Back (lose remaining free spins)"}
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "clamp(3px, 0.4vw, 6px)",
+            background: fsExitConfirm ? "rgba(255,68,68,0.15)" : "rgba(0,0,0,0.5)",
+            border: fsExitConfirm ? "1px solid rgba(255,68,68,0.5)" : "1px solid rgba(255,215,0,0.3)",
+            borderRadius: 8,
+            padding: "clamp(4px, 0.5vw, 7px) clamp(6px, 0.8vw, 12px)",
+            color: fsExitConfirm ? "#FF4444" : "#D4A843",
             fontFamily: "'Cinzel', serif",
             fontWeight: 700,
-            fontSize: "clamp(14px, 2vw, 22px)",
+            fontSize: "clamp(8px, 1vw, 11px)",
+            cursor: "pointer",
+            minHeight: 36,
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            transition: "all 0.3s ease",
+          }}
+        >
+          <span style={{ fontSize: "clamp(10px, 1.1vw, 14px)" }}>←</span>
+          {fsExitConfirm
+            ? (lang === "br" ? "CONFIRMAR?" : "CONFIRM?")
+            : (lang === "br" ? "SAIR" : "EXIT")}
+        </motion.button>
+
+        {/* Badge FREE SPINS */}
+        <motion.div
+          animate={{ scale: [1, 1.02, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontWeight: 900,
+            fontSize: "clamp(11px, 1.4vw, 16px)",
             color: "#FFD700",
             textTransform: "uppercase",
             letterSpacing: "3px",
             textShadow: "0 0 12px rgba(255,215,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
+            padding: "clamp(3px, 0.4vw, 6px) clamp(8px, 1vw, 14px)",
+            background: "rgba(255,215,0,0.08)",
+            border: "1px solid rgba(255,215,0,0.3)",
+            borderRadius: "8px",
           }}
         >
-          {t("slotMachine")}
-        </span>
-        
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "clamp(4px, 0.5vw, 6px)",
-          }}
-        >
-          <img
-            src={ASSETS.iconGcoin}
-            alt="GCoin"
-            style={{
-              width: "clamp(14px, 1.5vw, 20px)",
-              height: "clamp(14px, 1.5vw, 20px)",
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontWeight: 700,
-              fontSize: "clamp(12px, 1.6vw, 18px)",
-              color: "#00E676",
-              textShadow: "0 0 8px rgba(0,230,118,0.4)",
-            }}
-          >
-            {saldo.toLocaleString("pt-BR")}
-          </span>
-        </div>
-      </div>
-      
-      {/* HUD Free Spins */}
-      <div
-        style={{
-          display: "flex",
-          gap: "clamp(16px, 2vw, 32px)",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "clamp(8px, 1vw, 16px) clamp(16px, 2vw, 32px)",
-          background: "linear-gradient(180deg, rgba(212,168,67,0.15), rgba(212,168,67,0.05))",
-          border: "1px solid rgba(212,168,67,0.4)",
-          borderRadius: "14px",
-          margin: "clamp(8px, 1vw, 12px) auto",
-          zIndex: 5,
-        }}
-      >
+          FREE SPINS
+        </motion.div>
+
         {/* FS Counter */}
         <motion.div
           key={freeSpinsRemaining}
           initial={{ scale: 1.2 }}
           animate={{ scale: 1 }}
           style={{
-            fontFamily: "'Cinzel', serif",
+            fontFamily: "'JetBrains Mono', monospace",
             fontWeight: 700,
-            fontSize: "clamp(12px, 1.5vw, 18px)",
+            fontSize: "clamp(13px, 1.6vw, 19px)",
             color: "#00E676",
             textShadow: "0 0 10px rgba(0,230,118,0.5)",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
           }}
         >
-          {t("fsRemaining")}: {freeSpinsRemaining}/{freeSpinsTotal}
+          {freeSpinsRemaining}/{freeSpinsTotal}
         </motion.div>
         
+        {/* Separador */}
+        <div style={{ width: 1, height: "clamp(16px, 2vw, 24px)", background: "rgba(255,215,0,0.25)" }} />
+
         {/* Multiplicador */}
         <motion.div
           key={fsMultiplier}
@@ -1778,15 +2208,15 @@ export default function SlotsGame({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "clamp(4px, 0.5vw, 8px)",
+            gap: "clamp(3px, 0.4vw, 6px)",
           }}
         >
           <img
             src="/assets/games/slots/symbols/multiplier_orb.png"
             alt="Multiplier"
             style={{
-              width: "clamp(24px, 3vw, 36px)",
-              height: "clamp(24px, 3vw, 36px)",
+              width: "clamp(20px, 2.5vw, 30px)",
+              height: "clamp(20px, 2.5vw, 30px)",
             }}
           />
           <span
@@ -1801,6 +2231,9 @@ export default function SlotsGame({
             x{fsMultiplier}
           </span>
         </motion.div>
+
+        {/* Separador */}
+        <div style={{ width: 1, height: "clamp(16px, 2vw, 24px)", background: "rgba(255,215,0,0.25)" }} />
         
         {/* Total Win */}
         <div
@@ -1812,11 +2245,30 @@ export default function SlotsGame({
             textShadow: "0 0 8px rgba(0,230,118,0.4)",
           }}
         >
-          {t("total")}: {fsTotalWin.toLocaleString("pt-BR")} GC
+          {t("win")}: {fsTotalWin.toLocaleString("pt-BR")} GC
+        </div>
+
+        {/* Separador */}
+        <div style={{ width: 1, height: "clamp(16px, 2vw, 24px)", background: "rgba(255,215,0,0.25)" }} />
+
+        {/* Saldo */}
+        <div style={{ display: "flex", alignItems: "center", gap: "clamp(3px, 0.4vw, 5px)" }}>
+          <img src={ASSETS.iconGcoin} alt="GCoin" style={{ width: "clamp(12px, 1.3vw, 16px)", height: "clamp(12px, 1.3vw, 16px)" }} />
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700,
+              fontSize: "clamp(11px, 1.4vw, 16px)",
+              color: "#00E676",
+              textShadow: "0 0 6px rgba(0,230,118,0.3)",
+            }}
+          >
+            {saldo.toLocaleString("pt-BR")}
+          </span>
         </div>
       </div>
       
-      {/* Grid Area (mesmo do VideoSlot mas com frame dourado mais forte) */}
+      {/* Grid Area (frame dourado mais forte para FS) */}
       <div
         style={{
           flex: 1,
@@ -1824,8 +2276,9 @@ export default function SlotsGame({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "clamp(8px, 1vw, 16px)",
+          padding: "clamp(4px, 0.6vw, 10px)",
           minHeight: 0,
+          overflow: "hidden",
           zIndex: 2,
         }}
       >
@@ -1841,18 +2294,18 @@ export default function SlotsGame({
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: "relative",
-            margin: "clamp(4px, 0.8vw, 8px) auto",
-            padding: "clamp(6px, 1vw, 12px)",
+            padding: "clamp(4px, 0.6vw, 10px)",
             border: "2px solid #FFD700",
             outline: "3px solid rgba(255,215,0,0.25)",
             outlineOffset: "4px",
             borderRadius: "18px",
             background: "linear-gradient(180deg, #0F0F0F 0%, #0A0A0A 100%)",
-            width: "clamp(300px, 70vw, 600px)",
-            maxHeight: "55vh",
+            width: "clamp(280px, 65vw, 560px)",
+            maxHeight: "clamp(200px, 42vh, 360px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden",
           }}
         >
           {/* Tumble Badge */}
@@ -1980,78 +2433,94 @@ export default function SlotsGame({
         </div>
       </div>
       
-      {/* Bet Controls (desabilitados durante FS) */}
+      {/* Footer FS — spin dourado + bet */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: "clamp(4px, 0.5vw, 8px)",
-          padding: "clamp(6px, 0.8vw, 12px) clamp(8px, 1.5vw, 16px)",
+          gap: "clamp(12px, 2vw, 24px)",
+          padding: "clamp(6px, 0.8vw, 10px) clamp(12px, 2vw, 20px)",
           background: "rgba(0,0,0,0.6)",
           borderTop: "1px solid rgba(255,215,0,0.2)",
-          
           flexShrink: 0,
           zIndex: 5,
-          opacity: 0.4,
-          pointerEvents: "none",
         }}
       >
-        {/* Bet Display */}
+        {/* Bet display */}
         <div
           style={{
-            padding: "clamp(4px, 0.5vw, 8px) clamp(12px, 1.5vw, 20px)",
-            background: "rgba(0,0,0,0.4)",
-            border: "1px solid rgba(255,215,0,0.3)",
-            borderRadius: "6px",
             display: "flex",
             alignItems: "center",
             gap: "clamp(4px, 0.5vw, 8px)",
+            padding: "clamp(3px, 0.4vw, 6px) clamp(8px, 1vw, 14px)",
+            background: "rgba(0,0,0,0.4)",
+            border: "1px solid rgba(255,215,0,0.25)",
+            borderRadius: "6px",
           }}
         >
-          <span
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 600,
-              fontSize: "clamp(8px, 1vw, 11px)",
-              color: "#A8A8A8",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-            }}
-          >
+          <span style={{ fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "clamp(8px, 1vw, 11px)", color: "#A8A8A8", textTransform: "uppercase", letterSpacing: "1px" }}>
             {t("bet")}:
           </span>
-          <span
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontWeight: 700,
-              fontSize: "clamp(12px, 1.4vw, 16px)",
-              color: "#FFD700",
-              textShadow: "0 0 6px rgba(255,215,0,0.4)",
-            }}
-          >
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: "clamp(12px, 1.4vw, 16px)", color: "#FFD700", textShadow: "0 0 6px rgba(255,215,0,0.4)" }}>
             {bet} GC
           </span>
         </div>
-        
-        {/* Spin Button (dourado durante FS) */}
-        <div
+
+        {/* Spin button DOURADO (FS) */}
+        <motion.button
+          onClick={() => { if (!isSpinning && freeSpinsRemaining > 0) handleSpin(); }}
+          disabled={isSpinning || freeSpinsRemaining <= 0}
+          whileHover={!isSpinning && freeSpinsRemaining > 0 ? { scale: 1.08 } : {}}
+          whileTap={!isSpinning && freeSpinsRemaining > 0 ? { scale: 0.92 } : {}}
+          animate={!isSpinning && freeSpinsRemaining > 0 ? {
+            boxShadow: [
+              "0 0 15px rgba(255,215,0,0.3), 0 4px 12px rgba(0,0,0,0.5)",
+              "0 0 25px rgba(255,215,0,0.5), 0 4px 12px rgba(0,0,0,0.5)",
+              "0 0 15px rgba(255,215,0,0.3), 0 4px 12px rgba(0,0,0,0.5)",
+            ],
+          } : {}}
+          transition={!isSpinning ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : {}}
+          title={lang === "br" ? "Girar (Free Spin gratuito)" : "Spin (Free Spin)"}
           style={{
-            width: "56px",
-            height: "56px",
+            width: "clamp(48px, 6vw, 64px)",
+            height: "clamp(48px, 6vw, 64px)",
             borderRadius: "50%",
-            background: "linear-gradient(180deg, #FFD700 0%, #8B6914 100%)",
-            border: "2px solid rgba(255,215,0,0.6)",
-            color: "#0A0A0A",
+            background: freeSpinsRemaining > 0
+              ? "linear-gradient(135deg, #FFD700 0%, #D4A843 50%, #8B6914 100%)"
+              : "linear-gradient(135deg, #444 0%, #333 100%)",
+            border: "2px solid rgba(255,255,255,0.2)",
+            cursor: freeSpinsRemaining > 0 && !isSpinning ? "pointer" : "not-allowed",
+            opacity: isSpinning ? 0.5 : 1,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 20px rgba(255,215,0,0.4)",
-            fontSize: "20px",
+            fontFamily: "'Cinzel', serif",
             fontWeight: 900,
+            fontSize: "clamp(9px, 1.1vw, 12px)",
+            color: "#0A0A0A",
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            minWidth: 44,
+            minHeight: 44,
           }}
         >
-          ▶
+          {isSpinning ? "..." : "SPIN"}
+        </motion.button>
+
+        {/* Win atual */}
+        <div
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontWeight: 700,
+            fontSize: "clamp(11px, 1.4vw, 16px)",
+            color: currentWin > 0 ? "#00E676" : "#555",
+            textShadow: currentWin > 0 ? "0 0 8px rgba(0,230,118,0.4)" : "none",
+            minWidth: "clamp(60px, 8vw, 100px)",
+            textAlign: "center",
+          }}
+        >
+          {currentWin > 0 ? `+${currentWin.toLocaleString("pt-BR")} GC` : "-- GC"}
         </div>
       </div>
     </motion.div>
@@ -2244,7 +2713,11 @@ export default function SlotsGame({
         }}
       >
         <motion.button
-          onClick={onBack}
+          onClick={() => {
+            setScreen("modeSelect");
+            setMode(null);
+            setCurrentWin(0);
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           title={t("backTooltip")}
@@ -2252,19 +2725,22 @@ export default function SlotsGame({
             display: "flex",
             alignItems: "center",
             gap: "clamp(4px, 0.5vw, 8px)",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(0,0,0,0.6)",
+            border: "1px solid rgba(212,168,67,0.4)",
             borderRadius: 8,
             padding: "clamp(6px, 0.8vw, 10px) clamp(10px, 1.2vw, 14px)",
-            color: "#A8A8A8",
+            color: "#D4A843",
             fontFamily: "'Cinzel', serif",
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: "clamp(10px, 1.2vw, 13px)",
             cursor: "pointer",
             minHeight: 44,
+            letterSpacing: "2px",
+            textTransform: "uppercase",
           }}
         >
-          ← {t("back")}
+          <span style={{ fontSize: "clamp(12px, 1.2vw, 16px)" }}>←</span>
+          {t("back")}
         </motion.button>
 
         <span
@@ -2580,6 +3056,49 @@ export default function SlotsGame({
               }}
             />
           </motion.div>
+
+          {/* Win/Lose feedback — estilo arcade stamp */}
+          <AnimatePresence>
+            {classicFeedback && (
+              <motion.div
+                key={classicFeedback + Date.now()}
+                initial={{ opacity: 0, scale: 2.5 }}
+                animate={{ opacity: [0, 1, 1, 1, 0], scale: [2.5, 0.9, 1.05, 1, 1] }}
+                transition={{ duration: 1.6, times: [0, 0.15, 0.25, 0.35, 1] }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 20,
+                  pointerEvents: "none",
+                  background: classicFeedback === "win"
+                    ? "radial-gradient(ellipse at center, rgba(0,230,118,0.1) 0%, transparent 60%)"
+                    : "radial-gradient(ellipse at center, rgba(255,68,68,0.08) 0%, transparent 60%)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontWeight: 900,
+                    fontSize: "clamp(28px, 6vw, 52px)",
+                    textTransform: "uppercase",
+                    letterSpacing: "clamp(4px, 1vw, 8px)",
+                    color: classicFeedback === "win" ? "#00E676" : "#FF4444",
+                    textShadow: classicFeedback === "win"
+                      ? "0 0 30px rgba(0,230,118,0.8), 0 0 60px rgba(0,230,118,0.4), 0 0 100px rgba(0,230,118,0.2), 0 4px 12px rgba(0,0,0,0.9)"
+                      : "0 0 30px rgba(255,68,68,0.6), 0 0 60px rgba(255,68,68,0.3), 0 0 100px rgba(255,68,68,0.15), 0 4px 12px rgba(0,0,0,0.9)",
+                    WebkitTextStroke: "1px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  {classicFeedback === "win"
+                    ? (lang === "br" ? "GANHOU!" : "YOU WIN!")
+                    : (lang === "br" ? "SEM SORTE" : "NO LUCK")}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* PAINEL LED INFERIOR */}
           <div
@@ -3852,14 +4371,31 @@ export default function SlotsGame({
         fontFamily: "'Inter', sans-serif",
       }}
     >
-      {/* Header Global */}
+      {/* Keyframes — copiados do SpotlightLayout (Hero) */}
+      <style>{`
+        @keyframes slotsShimmerSweep {
+          0% { transform: translateX(-100%) rotate(25deg); }
+          100% { transform: translateX(200%) rotate(25deg); }
+        }
+        @keyframes slotsSpotlightBreathe {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.85; }
+        }
+        @keyframes slotsFloatParticle {
+          0% { opacity: 0; transform: translateY(8px) scale(0.4); }
+          25% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(-35px) scale(0.15); }
+        }
+      `}</style>
+
+      {/* Header Global — so aparece no modeSelect */}
+      {screen === "modeSelect" && (
       <header
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "clamp(6px, 0.8vw, 10px) clamp(8px, 1.5vw, 16px)",
-          borderBottom: screen === "modeSelect" ? "none" : "1px solid rgba(212,168,67,0.1)",
           flexShrink: 0,
           zIndex: 10,
         }}
@@ -3934,6 +4470,7 @@ export default function SlotsGame({
           </div>
         )}
       </header>
+      )}
       
       {/* Conteudo da Tela */}
       <AnimatePresence mode="wait">
@@ -3967,6 +4504,30 @@ export default function SlotsGame({
       <AnimatePresence>
         {showBuyBonus && renderBuyBonusModal()}
       </AnimatePresence>
+
+      {/* Dev Toolbar — so aparece no localhost */}
+      <DevToolbar
+        currentScreen={screen}
+        screens={[
+          { key: "1", label: "Mode Select", action: () => { setScreen("modeSelect"); setMode(null); } },
+          { key: "2", label: "Video Idle", action: () => { setScreen("videoIdle"); setMode("video"); } },
+          { key: "3", label: "Spinning", action: () => { setScreen("spinning"); setMode("video"); } },
+          { key: "4", label: "FS Trigger", action: () => { setScreen("fsTrigger"); setFreeSpinsTotal(10); setFreeSpinsRemaining(10); } },
+          { key: "5", label: "FS Playing", action: () => { setScreen("fsPlaying"); setFreeSpinsTotal(10); setFreeSpinsRemaining(7); setFsMultiplier(12); setFsTotalWin(450); } },
+          { key: "6", label: "Win Overlay", action: () => { setWinOverlayData({ amount: 250, ratio: 25 }); setScreen("winOverlay"); } },
+          { key: "7", label: "Classic Idle", action: () => { setScreen("classicIdle"); setMode("classic"); } },
+          { key: "8", label: "Paytable", action: () => setShowPaytable(true) },
+          { key: "9", label: "History", action: () => setShowHistory(true) },
+          { key: "0", label: "Buy Bonus", action: () => setShowBuyBonus(true) },
+        ]}
+        extraInfo={{
+          saldo: saldo,
+          bet: bet,
+          mode: mode || "none",
+          fsRemaining: freeSpinsRemaining,
+          nonce: nonce,
+        }}
+      />
     </motion.div>
   );
 }
