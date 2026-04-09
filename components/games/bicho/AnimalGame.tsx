@@ -210,6 +210,21 @@ function getCurrentTime(): string {
   return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 }
 
+// FiveM NUI: detecta se esta rodando dentro do NUI (FiveM) ou browser (dev)
+const isFiveM = typeof window !== "undefined" && !!(window as any).invokeNative;
+
+async function fetchNui(endpoint: string, data?: any): Promise<any> {
+  const resourceName = (window as any).GetParentResourceName
+    ? (window as any).GetParentResourceName()
+    : "blackout-casino";
+  const resp = await fetch(`https://${resourceName}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data || {}),
+  });
+  return resp.json();
+}
+
 function NumberDrum({ value, revealed }: { value: string; revealed: boolean }) {
   const [display, setDisplay] = useState("----");
   useEffect(() => {
@@ -378,7 +393,7 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
     sounds.randomBet();
   }, [maxSelections, sounds]);
 
-  const handlePlay = useCallback(() => {
+  const handlePlay = useCallback(async () => {
     if (!canPlay) return;
     sounds.placeBet();
 
@@ -387,50 +402,97 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
     setRevealedCapsules([]);
     setShowConfetti(false);
 
-    const results = generateDrawResults();
-    setDrawResults(results);
+    if (isFiveM) {
+      // ==================== FIVEM: servidor gera resultado ====================
+      try {
+        const resp = await fetchNui("casino:bicho:play", {
+          mode: betMode,
+          animals: selectedAnimals,
+          bet: betAmount,
+          clientSeed: fairData.clientSeed,
+        });
 
-    // Gerar novo serverSeedHash para proxima rodada
-    setFairData(prev => ({
-      ...prev,
-      serverSeedHash: generateRandomHex(64),
-      serverSeed: generateRandomHex(64),
-      resultHash: generateRandomHex(64),
-      nonce: prev.nonce + 1,
-      isValid: null,
-    }));
-
-    // Verificar vitoria — TODOS selecionados devem aparecer nos 5 resultados
-    const drawnAnimalIds = results.map((r) => r.animalId);
-    const matches: number[] = [];
-    
-    selectedAnimals.forEach((selectedId) => {
-      drawnAnimalIds.forEach((drawnId, idx) => {
-        if (selectedId === drawnId) {
-          matches.push(idx + 1);
+        if (resp.erro) {
+          setSaldo(saldo); // reverter debito local
+          setPhase("BETTING");
+          return;
         }
-      });
-    });
 
-    setMatchedPositions(matches);
+        // Mapear resposta do server pro formato do React
+        const results: DrawResult[] = resp.resultados.map((r: any) => ({
+          position: r.posicao,
+          number: parseInt(r.milhar),
+          animalId: r.grupo,
+        }));
+        setDrawResults(results);
 
-    // Vitoria so se TODOS os animais selecionados apareceram
-    const allMatched = selectedAnimals.every(sel => drawnAnimalIds.includes(sel));
+        // PF data do server
+        setFairData(prev => ({
+          ...prev,
+          serverSeedHash: resp.serverSeedHash,
+          serverSeed: resp.serverSeed,
+          clientSeed: resp.clientSeed,
+          nonce: resp.nonce,
+          resultHash: resp.resultHash,
+          isValid: null,
+        }));
 
-    if (allMatched && matches.length >= selectedAnimals.length) {
-      setIsWin(true);
-      const { multipliers } = MODE_CONFIG[betMode];
-      // Melhor multiplicador se todos nas primeiras posicoes
-      const maxPos = Math.max(...matches);
-      const isFirstPositions = maxPos <= selectedAnimals.length;
-      const multiplier = isFirstPositions ? multipliers.first : multipliers.others;
-      const payout = betAmount * multiplier;
-      setWinAmount(payout);
+        // Resultado do server
+        setIsWin(resp.ganhou);
+        setWinAmount(resp.ganhou ? resp.payout : 0);
+        setSaldo(resp.novoSaldo);
+
+        // Posicoes dos matches
+        const drawnIds = results.map(r => r.animalId);
+        const matches: number[] = [];
+        selectedAnimals.forEach(sel => {
+          const idx = drawnIds.indexOf(sel);
+          if (idx !== -1) matches.push(idx + 1);
+        });
+        setMatchedPositions(matches);
+
+      } catch (err) {
+        setSaldo(saldo); // reverter
+        setPhase("BETTING");
+      }
+
     } else {
-      setIsWin(false);
-      setWinAmount(0);
+      // ==================== MOCK: browser gera resultado local ====================
+      const results = generateDrawResults();
+      setDrawResults(results);
+
+      setFairData(prev => ({
+        ...prev,
+        serverSeedHash: generateRandomHex(64),
+        serverSeed: generateRandomHex(64),
+        resultHash: generateRandomHex(64),
+        nonce: prev.nonce + 1,
+        isValid: null,
+      }));
+
+      const drawnAnimalIds = results.map((r) => r.animalId);
+      const matches: number[] = [];
+      selectedAnimals.forEach((selectedId) => {
+        drawnAnimalIds.forEach((drawnId, idx) => {
+          if (selectedId === drawnId) matches.push(idx + 1);
+        });
+      });
+      setMatchedPositions(matches);
+
+      const allMatched = selectedAnimals.every(sel => drawnAnimalIds.includes(sel));
+      if (allMatched && matches.length >= selectedAnimals.length) {
+        setIsWin(true);
+        const { multipliers } = MODE_CONFIG[betMode];
+        const maxPos = Math.max(...matches);
+        const isFirstPositions = maxPos <= selectedAnimals.length;
+        const multiplier = isFirstPositions ? multipliers.first : multipliers.others;
+        setWinAmount(betAmount * multiplier);
+      } else {
+        setIsWin(false);
+        setWinAmount(0);
+      }
     }
-  }, [canPlay, saldo, betAmount, selectedAnimals, betMode, setSaldo]);
+  }, [canPlay, saldo, betAmount, selectedAnimals, betMode, fairData.clientSeed, setSaldo]);
 
   const handleNewRound = useCallback(() => {
     // Adicionar ao historico
@@ -469,17 +531,53 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleVerify = useCallback(async () => {
-    // Simulacao de verificacao - em producao usaria Web Crypto API
-    // crypto.subtle.importKey + crypto.subtle.sign
-    setFairData(prev => ({
-      ...prev,
-      isValid: true, // Simulado como valido
-    }));
-  }, []);
+    if (isFiveM) {
+      try {
+        const resp = await fetchNui("casino:bicho:verify", { roundId: fairData.nonce });
+        if (resp.erro) {
+          setFairData(prev => ({ ...prev, isValid: false }));
+          return;
+        }
+        setFairData(prev => ({
+          ...prev,
+          serverSeed: resp.serverSeed,
+          isValid: resp.valido,
+        }));
+      } catch {
+        setFairData(prev => ({ ...prev, isValid: false }));
+      }
+    } else {
+      // Mock: simula verificacao valida
+      setFairData(prev => ({ ...prev, isValid: true }));
+    }
+  }, [fairData.nonce]);
 
   // ===========================================================================
   // EFFECTS
   // ===========================================================================
+
+  // FiveM: buscar historico do server quando abre o modal
+  useEffect(() => {
+    if (!showHistory || !isFiveM) return;
+    (async () => {
+      try {
+        const resp = await fetchNui("casino:bicho:getHistory", { limite: 20 });
+        if (Array.isArray(resp) && resp.length > 0) {
+          const mapped: HistoryEntry[] = resp.map((r: any) => ({
+            id: r.id,
+            mode: r.mode as BetMode,
+            won: r.won === 1,
+            payout: r.payout_amount || 0,
+            betAmount: r.bet_amount,
+            animals: [r.prize_1_grupo, r.prize_2_grupo, r.prize_3_grupo, r.prize_4_grupo, r.prize_5_grupo],
+            selectedAnimals: JSON.parse(r.animals_selected || "[]"),
+            hora: new Date(r.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+          }));
+          setHistory(mapped);
+        }
+      } catch {}
+    })();
+  }, [showHistory]);
 
   // Reveal sequencial com useAnimate — shake, lid, animal, nome, pausa por capsula
   useEffect(() => {
