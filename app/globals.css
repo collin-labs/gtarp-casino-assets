@@ -459,3 +459,26 @@ html, body, #__next {
     opacity: 0.06;
   }
 }
+
+/* -------------------------------------------------------
+   GameModal — scrollbar dourada premium (Chromium CEF)
+   ------------------------------------------------------- */
+.game-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.game-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.game-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(212,168,67,0.25);
+  border-radius: 3px;
+}
+.game-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(212,168,67,0.45);
+}
+
+/* GameModal — shimmer sutil no header */
+@keyframes modal-header-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

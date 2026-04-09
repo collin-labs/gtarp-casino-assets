@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, useAnimate } from "framer-motion";
 import { useCasino } from "@/contexts/CasinoContext";
+import { HistoryModal, ProvablyFairModal, type PFData } from "@/components/shared";
 
 // ===========================================================================
 // ANIMAL GAME / JOGO DO BICHO (#9) — Blackout Casino GTARP
@@ -2554,368 +2555,87 @@ export default function AnimalGame({ onBack }: { onBack: () => void }) {
         )}
       </AnimatePresence>
 
-      {/* TELA 5 - HISTORICO (Slide-in lateral) */}
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            key="history-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {/* TELA 5 - HISTORICO (shared component) */}
+      <HistoryModal
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        title={TEXTS.history[lang]}
+        lang={lang}
+        columns={[]}
+        data={history}
+        renderCustomRow={(entry: HistoryEntry, idx: number) => (
+          <div
             style={{
-              position: "absolute", inset: 0, zIndex: 80,
-              background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              display: "flex", flexDirection: "column" as const, gap: "8px",
+              padding: "clamp(10px, 1.2vw, 14px)",
+              background: idx % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+              borderRadius: "8px",
             }}
-            onClick={() => setShowHistory(false)}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={e => e.stopPropagation()}
-              style={{
-                width: "clamp(360px, 55vw, 650px)", maxHeight: "80vh",
-                background: "linear-gradient(180deg, #151210 0%, #0C0A08 100%)",
-                border: "1px solid rgba(212,168,67,0.2)", borderRadius: "14px",
-                display: "flex", flexDirection: "column" as const, overflow: "hidden",
-              }}
-            >
-              {/* Header */}
-              <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "clamp(12px, 1.5vw, 18px) clamp(16px, 2vw, 24px)",
-                borderBottom: "1px solid rgba(212,168,67,0.12)",
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(10px, 1vw, 12px)",
+                color: "rgba(212,168,67,0.4)",
+              }}>#{entry.id}</span>
+              <span style={{
+                padding: "2px 8px", borderRadius: "4px",
+                fontSize: "clamp(9px, 0.9vw, 11px)", fontWeight: 700,
+                background: entry.won ? "rgba(0,230,118,0.1)" : "rgba(255,68,68,0.1)",
+                color: entry.won ? "#00E676" : "#FF6B6B",
+                border: `1px solid ${entry.won ? "rgba(0,230,118,0.2)" : "rgba(255,68,68,0.2)"}`,
               }}>
-                <h2 style={{
-                  fontFamily: "'Cinzel', serif", fontWeight: 800,
-                  fontSize: "clamp(16px, 2vw, 22px)", color: "#D4A843",
-                  letterSpacing: "2px", margin: 0,
-                }}>
-                  {TEXTS.history[lang]}
-                </h2>
-                <motion.button
-                  onClick={() => setShowHistory(false)}
-                  whileHover={{ color: "#D4A843", scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  style={{
-                    background: "transparent", border: "none", color: "rgba(255,255,255,0.4)",
-                    fontSize: "20px", cursor: "pointer", width: "32px", height: "32px",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >
-                  ✕
-                </motion.button>
-              </div>
-
-              {/* Lista */}
-              <div style={{
-                flex: 1, overflowY: "auto" as const,
-                padding: "clamp(12px, 1.5vw, 20px)",
-                scrollbarWidth: "thin" as any,
-                scrollbarColor: "rgba(212,168,67,0.3) transparent" as any,
+                {entry.won ? (lang === "br" ? "VITORIA" : "WIN") : (lang === "br" ? "DERROTA" : "LOSS")}
+              </span>
+              <span style={{
+                marginLeft: "auto",
+                fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
+                fontSize: "clamp(11px, 1.2vw, 14px)",
+                color: entry.won ? "#00E676" : "#FF6B6B",
               }}>
-                {history.length === 0 ? (
-                  <div style={{
-                    textAlign: "center", padding: "40px 20px",
-                    color: "rgba(255,255,255,0.3)", fontFamily: "'Inter', sans-serif",
-                    fontSize: "clamp(12px, 1.2vw, 14px)",
+                {entry.won ? `+G$${formatBalance(entry.payout)}` : `-G$${formatBalance(entry.betAmount)}`}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "4px" }}>
+              {entry.animals.map((animalId: number, aIdx: number) => {
+                const isMatch = entry.selectedAnimals.includes(animalId);
+                return (
+                  <div key={aIdx} style={{
+                    width: "clamp(28px, 3.5vw, 40px)", height: "clamp(28px, 3.5vw, 40px)",
+                    borderRadius: "4px", overflow: "hidden",
+                    border: isMatch ? "1px solid rgba(0,230,118,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                    opacity: isMatch ? 1 : 0.4,
                   }}>
-                    {lang === "br" ? "Nenhum historico ainda. Jogue para ver seus resultados aqui." : "No history yet. Play to see your results here."}
+                    <img src={ASSETS.getAnimal(animalId)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
-                ) : (
-                  history.map((entry, idx) => (
-                    <motion.div
-                      key={entry.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.04 * idx }}
-                      style={{
-                        display: "flex", flexDirection: "column" as const, gap: "8px",
-                        padding: "clamp(10px, 1.2vw, 14px)",
-                        background: idx % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
-                        borderRadius: "8px",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      {/* Linha 1: ID + Status + Valor */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{
-                          fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(10px, 1vw, 12px)",
-                          color: "rgba(212,168,67,0.4)",
-                        }}>#{entry.id}</span>
-                        <span style={{
-                          padding: "2px 8px", borderRadius: "4px",
-                          fontSize: "clamp(9px, 0.9vw, 11px)", fontWeight: 700,
-                          background: entry.won ? "rgba(0,230,118,0.1)" : "rgba(255,68,68,0.1)",
-                          color: entry.won ? "#00E676" : "#FF6B6B",
-                          border: `1px solid ${entry.won ? "rgba(0,230,118,0.2)" : "rgba(255,68,68,0.2)"}`,
-                        }}>
-                          {entry.won ? (lang === "br" ? "VITORIA" : "WIN") : (lang === "br" ? "DERROTA" : "LOSS")}
-                        </span>
-                        <span style={{
-                          marginLeft: "auto",
-                          fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
-                          fontSize: "clamp(11px, 1.2vw, 14px)",
-                          color: entry.won ? "#00E676" : "#FF6B6B",
-                        }}>
-                          {entry.won ? `+G$${formatBalance(entry.payout)}` : `-G$${formatBalance(entry.betAmount)}`}
-                        </span>
-                      </div>
-
-                      {/* Linha 2: Animais sorteados */}
-                      <div style={{ display: "flex", gap: "4px" }}>
-                        {entry.animals.map((animalId, aIdx) => {
-                          const isMatch = entry.selectedAnimals.includes(animalId);
-                          return (
-                            <div key={aIdx} style={{
-                              width: "clamp(28px, 3.5vw, 40px)", height: "clamp(28px, 3.5vw, 40px)",
-                              borderRadius: "4px", overflow: "hidden",
-                              border: isMatch ? "1px solid rgba(0,230,118,0.5)" : "1px solid rgba(255,255,255,0.06)",
-                              opacity: isMatch ? 1 : 0.4,
-                            }}>
-                              <img src={ASSETS.getAnimal(animalId)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Linha 3: Modo + Hora */}
-                      <div style={{
-                        fontSize: "clamp(9px, 0.9vw, 11px)",
-                        color: "rgba(255,255,255,0.25)",
-                        fontFamily: "'Inter', sans-serif",
-                      }}>
-                        {TEXTS.modes[entry.mode][lang]} | {entry.hora}
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
+                );
+              })}
+            </div>
+            <div style={{
+              fontSize: "clamp(9px, 0.9vw, 11px)",
+              color: "rgba(255,255,255,0.25)",
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              {TEXTS.modes[entry.mode][lang]} | {entry.hora}
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      />
 
-      {/* TELA 6 - PROVABLY FAIR */}
-      <AnimatePresence>
-        {showProvablyFair && (
-          <motion.div
-            key="pf-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: "absolute", inset: 0, zIndex: 80,
-              background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-            onClick={() => setShowProvablyFair(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={e => e.stopPropagation()}
-              style={{
-                width: "clamp(360px, 50vw, 580px)", maxHeight: "80vh",
-                background: "linear-gradient(180deg, #151210 0%, #0C0A08 100%)",
-                border: "1px solid rgba(212,168,67,0.2)", borderRadius: "14px",
-                display: "flex", flexDirection: "column" as const, overflow: "hidden",
-              }}
-            >
-              {/* Header */}
-              <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "clamp(12px, 1.5vw, 18px) clamp(16px, 2vw, 24px)",
-                borderBottom: "1px solid rgba(212,168,67,0.12)",
-              }}>
-                <h2 style={{
-                  fontFamily: "'Cinzel', serif", fontWeight: 800,
-                  fontSize: "clamp(16px, 2vw, 22px)", color: "#D4A843",
-                  letterSpacing: "2px", margin: 0,
-                  display: "flex", alignItems: "center", gap: "8px",
-                }}>
-                  <img src={ASSETS.iconProvablyFair} alt="" style={{ width: "20px", height: "20px", opacity: 0.8 }} />
-                  {TEXTS.provablyFair[lang]}
-                </h2>
-                <motion.button
-                  onClick={() => setShowProvablyFair(false)}
-                  whileHover={{ color: "#D4A843", scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  style={{
-                    background: "transparent", border: "none", color: "rgba(255,255,255,0.4)",
-                    fontSize: "20px", cursor: "pointer", width: "32px", height: "32px",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >
-                  ✕
-                </motion.button>
-              </div>
-
-              {/* Conteudo */}
-              <div style={{
-                flex: 1, overflowY: "auto" as const,
-                padding: "clamp(14px, 2vw, 22px)",
-                display: "flex", flexDirection: "column" as const, gap: "14px",
-                scrollbarWidth: "thin" as any,
-                scrollbarColor: "rgba(212,168,67,0.3) transparent" as any,
-              }}>
-                {/* Server Seed Hash */}
-                <div>
-                  <label style={{
-                    fontFamily: "'Cinzel', serif", fontSize: "clamp(10px, 1vw, 12px)",
-                    color: "rgba(212,168,67,0.6)", letterSpacing: "1px",
-                    display: "block", marginBottom: "6px",
-                  }}>{TEXTS.serverSeedHash[lang]}</label>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <div style={{
-                      flex: 1, padding: "8px 12px",
-                      background: "rgba(0,0,0,0.4)", borderRadius: "6px",
-                      border: "1px solid rgba(212,168,67,0.1)",
-                      fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(9px, 0.9vw, 11px)",
-                      color: "rgba(255,255,255,0.6)", wordBreak: "break-all" as const,
-                    }}>{fairData.serverSeedHash}</div>
-                    <motion.button
-                      onClick={() => handleCopy(fairData.serverSeedHash, "serverSeedHash")}
-                      whileHover={{ borderColor: "rgba(212,168,67,0.4)" }}
-                      whileTap={{ scale: 0.95 }}
-                      style={{
-                        padding: "8px", background: "rgba(0,0,0,0.3)",
-                        border: "1px solid rgba(212,168,67,0.15)", borderRadius: "6px",
-                        cursor: "pointer", outline: "none",
-                      }}
-                    >
-                      <img src={ASSETS.iconCopy} alt="" style={{
-                        width: "14px", height: "14px",
-                        opacity: copiedField === "serverSeedHash" ? 1 : 0.5,
-                        filter: copiedField === "serverSeedHash" ? "hue-rotate(90deg) brightness(1.5)" : "none",
-                      }} />
-                    </motion.button>
-                  </div>
-                </div>
-
-                {/* Client Seed */}
-                <div>
-                  <label style={{
-                    fontFamily: "'Cinzel', serif", fontSize: "clamp(10px, 1vw, 12px)",
-                    color: "rgba(212,168,67,0.6)", letterSpacing: "1px",
-                    display: "block", marginBottom: "6px",
-                  }}>{TEXTS.clientSeed[lang]}</label>
-                  <input
-                    type="text"
-                    value={fairData.clientSeed}
-                    onChange={(e) => setFairData(prev => ({ ...prev, clientSeed: e.target.value }))}
-                    style={{
-                      width: "100%", padding: "8px 12px",
-                      background: "rgba(0,0,0,0.4)", borderRadius: "6px",
-                      border: "1px solid rgba(212,168,67,0.2)",
-                      fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(10px, 1vw, 12px)",
-                      color: "#D4A843", outline: "none", boxSizing: "border-box" as const,
-                    }}
-                  />
-                </div>
-
-                {/* Nonce */}
-                <div>
-                  <label style={{
-                    fontFamily: "'Cinzel', serif", fontSize: "clamp(10px, 1vw, 12px)",
-                    color: "rgba(212,168,67,0.6)", letterSpacing: "1px",
-                    display: "block", marginBottom: "6px",
-                  }}>{TEXTS.nonce[lang]}</label>
-                  <div style={{
-                    padding: "8px 12px",
-                    background: "rgba(0,0,0,0.4)", borderRadius: "6px",
-                    border: "1px solid rgba(212,168,67,0.1)",
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(10px, 1vw, 12px)",
-                    color: "rgba(255,255,255,0.6)",
-                  }}>{fairData.nonce}</div>
-                </div>
-
-                {/* Server Seed (pos-jogo) */}
-                {fairData.serverSeed && (
-                  <div>
-                    <label style={{
-                      fontFamily: "'Cinzel', serif", fontSize: "clamp(10px, 1vw, 12px)",
-                      color: "rgba(212,168,67,0.6)", letterSpacing: "1px",
-                      display: "block", marginBottom: "6px",
-                    }}>{TEXTS.serverSeed[lang]}</label>
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                      <div style={{
-                        flex: 1, padding: "8px 12px",
-                        background: "rgba(0,0,0,0.4)", borderRadius: "6px",
-                        border: "1px solid rgba(212,168,67,0.1)",
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(9px, 0.9vw, 11px)",
-                        color: "rgba(255,255,255,0.6)", wordBreak: "break-all" as const,
-                      }}>{fairData.serverSeed}</div>
-                      <motion.button
-                        onClick={() => handleCopy(fairData.serverSeed, "serverSeed")}
-                        whileHover={{ borderColor: "rgba(212,168,67,0.4)" }}
-                        whileTap={{ scale: 0.95 }}
-                        style={{
-                          padding: "8px", background: "rgba(0,0,0,0.3)",
-                          border: "1px solid rgba(212,168,67,0.15)", borderRadius: "6px",
-                          cursor: "pointer", outline: "none",
-                        }}
-                      >
-                        <img src={ASSETS.iconCopy} alt="" style={{
-                          width: "14px", height: "14px",
-                          opacity: copiedField === "serverSeed" ? 1 : 0.5,
-                          filter: copiedField === "serverSeed" ? "hue-rotate(90deg) brightness(1.5)" : "none",
-                        }} />
-                      </motion.button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Verificar */}
-                <motion.button
-                  onClick={handleVerify}
-                  whileHover={{ borderColor: "rgba(0,230,118,0.5)", background: "rgba(0,230,118,0.1)" }}
-                  whileTap={{ scale: 0.98 }}
-                  style={{
-                    padding: "clamp(8px, 1vw, 12px)",
-                    background: "rgba(0,230,118,0.06)",
-                    border: "1px solid rgba(0,230,118,0.3)", borderRadius: "8px",
-                    fontFamily: "'Cinzel', serif", fontWeight: 700,
-                    fontSize: "clamp(11px, 1.2vw, 14px)", color: "#00E676",
-                    textTransform: "uppercase" as const, letterSpacing: "1px",
-                    cursor: "pointer", outline: "none",
-                  }}
-                >
-                  {TEXTS.verify[lang]}
-                </motion.button>
-
-                {/* Resultado */}
-                {fairData.isValid !== null && (
-                  <div style={{ textAlign: "center", padding: "8px 0" }}>
-                    <span style={{
-                      padding: "6px 16px", borderRadius: "6px",
-                      fontFamily: "'Cinzel', serif", fontWeight: 700,
-                      fontSize: "clamp(11px, 1.2vw, 14px)", letterSpacing: "1px",
-                      background: fairData.isValid ? "rgba(0,230,118,0.1)" : "rgba(255,68,68,0.1)",
-                      color: fairData.isValid ? "#00E676" : "#FF6B6B",
-                      border: `1px solid ${fairData.isValid ? "rgba(0,230,118,0.3)" : "rgba(255,68,68,0.3)"}`,
-                    }}>
-                      {TEXTS.result[lang]}: {fairData.isValid ? TEXTS.valid[lang] : TEXTS.invalid[lang]}
-                    </span>
-                  </div>
-                )}
-
-                {/* Explicacao */}
-                <p style={{
-                  fontSize: "clamp(10px, 1vw, 12px)", color: "rgba(255,255,255,0.3)",
-                  lineHeight: 1.6, fontFamily: "'Inter', sans-serif", margin: 0,
-                }}>
-                  {TEXTS.howItWorks[lang]}
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* TELA 6 - PROVABLY FAIR (shared component) */}
+      <ProvablyFairModal
+        open={showProvablyFair}
+        onClose={() => setShowProvablyFair(false)}
+        lang={lang}
+        pfData={{
+          serverSeedHash: fairData.serverSeedHash,
+          clientSeed: fairData.clientSeed,
+          nonce: fairData.nonce,
+          serverSeed: fairData.serverSeed,
+          isValid: fairData.isValid,
+        }}
+        onClientSeedChange={(seed) => setFairData(prev => ({ ...prev, clientSeed: seed }))}
+        onVerify={handleVerify}
+      />
     </div>
   );
 }
