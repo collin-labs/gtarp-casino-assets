@@ -77,9 +77,9 @@ export const MULTIPLIER_VALUES_BASE = [2, 3, 5];
 export const MULTIPLIER_VALUES_FS = [2, 3, 5, 8, 10, 15, 25, 50, 100];
 
 // Grid dimensions
-export const GRID_COLS = 6;
-export const GRID_ROWS = 5;
-export const GRID_SIZE = GRID_COLS * GRID_ROWS; // 30
+export const GRID_COLS = 8;
+export const GRID_ROWS = 4;
+export const GRID_SIZE = GRID_COLS * GRID_ROWS; // 32
 
 // Scatter pays: minimo 8 simbolos iguais anywhere
 export const MIN_SCATTER_PAYS = 8;

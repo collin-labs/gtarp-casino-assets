@@ -124,8 +124,10 @@ export function goldPath(id: number, name: string): string {
 }
 
 // Imagem com pedestal (image-para-hero/GTARP CASINO IMAGEM COM PEDESTAL/)
+const PEDESTAL_NO_IMAGE: Set<number> = new Set([16, 17, 18]);
 export function pedestalPath(id: number, name: string): string {
-  return encodeURI(`${BASE}/image-para-hero/GTARP CASINO IMAGEM COM PEDESTAL/${id}.${name}-IMAGEM-COM-PEDESTAL.png`);
+  const suffix = PEDESTAL_NO_IMAGE.has(id) ? "-NO-IMAGE" : "";
+  return encodeURI(`${BASE}/image-para-hero/GTARP CASINO IMAGEM COM PEDESTAL/${id}.${name}-IMAGEM-COM-PEDESTAL${suffix}.png`);
 }
 
 // Video hover por jogo (videos/hover/)

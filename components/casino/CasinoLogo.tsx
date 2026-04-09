@@ -9,17 +9,21 @@ interface CasinoLogoProps {
 }
 
 const SPARK_COUNT = 10;
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 49297;
+  return x - Math.floor(x);
+}
 const sparks = Array.from({ length: SPARK_COUNT }, (_, i) => {
-  const angle = (360 / SPARK_COUNT) * i + Math.random() * 20 - 10;
+  const angle = (360 / SPARK_COUNT) * i + seededRandom(i * 7 + 1) * 20 - 10;
   const rad = (angle * Math.PI) / 180;
-  const dist = 30 + Math.random() * 28;
+  const dist = 30 + seededRandom(i * 7 + 2) * 28;
   return {
     id: i,
     endX: Math.cos(rad) * dist,
     endY: Math.sin(rad) * dist,
     delay: i * 0.25,
-    duration: 1.6 + Math.random() * 1.2,
-    size: 2 + Math.random() * 2.5,
+    duration: 1.6 + seededRandom(i * 7 + 3) * 1.2,
+    size: 2 + seededRandom(i * 7 + 4) * 2.5,
     color: i % 3 === 0 ? "#FFD700" : i % 3 === 1 ? "#FFA500" : "#F6E27A",
   };
 });
@@ -184,8 +188,8 @@ export default function CasinoLogo({ visible }: CasinoLogoProps) {
               position: "absolute",
               left: `${15 + i * 14}%`,
               top: "50%",
-              width: 2 + Math.random() * 1.5,
-              height: 2 + Math.random() * 1.5,
+              width: 2 + seededRandom(i * 3 + 50) * 1.5,
+              height: 2 + seededRandom(i * 3 + 51) * 1.5,
               borderRadius: "50%",
               background: i % 2 === 0 ? "#FFD700" : "#F6E27A",
               boxShadow: `0 0 4px ${i % 2 === 0 ? "#FFD700" : "#F6E27A"}`,
