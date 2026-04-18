@@ -4,7 +4,7 @@
 // Recebe categorias de simbolos com payouts — layout premium com cards
 // Suporta abas por categoria, imagem do simbolo, payouts progressivos
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import GameModal from "./GameModal";
 
@@ -54,6 +54,12 @@ export default function PaytableModal({
   escPush,
   escPop,
 }: PaytableModalProps) {
+  const [activeTab, setActiveTab] = useState(categories[0]?.id || "");
+  const hasTabs = categories.length > 1;
+  const visibleCategories = hasTabs
+    ? categories.filter(c => c.id === activeTab)
+    : categories;
+
   return (
     <GameModal
       open={open}
@@ -64,13 +70,15 @@ export default function PaytableModal({
       escPush={escPush}
       escPop={escPop}
       width="clamp(380px, 62vw, 740px)"
-      tabs={categories.length > 1
+      tabs={hasTabs
         ? categories.map(c => ({ id: c.id, label: c.label }))
         : undefined
       }
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        {categories.map((category) => (
+        {visibleCategories.map((category) => (
           <CategorySection key={category.id} category={category} lang={lang} />
         ))}
 

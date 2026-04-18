@@ -1,10 +1,46 @@
 // Blackout Casino - Jogo do Bicho (#9) - Server Handler
+// IIFE: isola escopo pra nao conflitar com slots/panel (mesmo contexto V8 no FiveM)
+(function() {
 // Compativel com oxmysql 2.x / CommunityOx (prepared statements)
 // Provably Fair: HMAC_SHA256(serverSeed, clientSeed:nonce)
+
+// Wrapper: todo handler async com try/catch + logging
+const BICHO_RESPONSE = "casino:bicho:response";
+const _bichoOn = on;
+function safeBichoHandler(eventName, handler) {
+  RegisterNetEvent(eventName);
+  _bichoOn(eventName, async (...args) => {
+    const src = source;
+    const cbId = args[0];
+    console.log(`[CASINO-BICHO] ${eventName} src=${src} cbId=${cbId}`);
+    try {
+      await handler(src, cbId, args[1] || {});
+    } catch (err) {
+      console.log(`[CASINO-BICHO] ${eventName} ERRO: ${err.message}`);
+      console.log(`[CASINO-BICHO] Stack: ${err.stack}`);
+      emitNet(BICHO_RESPONSE, src, cbId, { error: "server_error", message: err.message });
+    }
+  });
+}
 // Seguranca: mutex por jogador, debito atomico, validacao completa
 
 const crypto = require("crypto");
-const db = exports.oxmysql;
+// oxmysql: SEMPRE chamar exports.oxmysql.method() direto (nao cachear proxy)
+// Helper DB: callback explicito wrappado em Promise (unico padrao que funciona no FiveM JS)
+function dbQuery(sql, params) {
+  return new Promise((resolve) => {
+    exports.oxmysql.query(sql, params || [], (result) => {
+      resolve(result);
+    });
+  });
+}
+function dbExecute(sql, params) {
+  return new Promise((resolve) => {
+    exports.oxmysql.execute(sql, params || [], (result) => {
+      resolve(result);
+    });
+  });
+}
 
 // Mutex por jogador — impede requests concorrentes do mesmo identifier
 const playerLocks = new Map();
@@ -118,13 +154,13 @@ function calcularPayout(mode, animaisSelecionados, resultados, aposta, config) {
 
 // Buscar config do bicho
 async function getConfig() {
-  const linhas = await db.query("SELECT * FROM casino_bicho_config WHERE id = 1");
+  const linhas = await dbQuery("SELECT * FROM casino_bicho_config WHERE id = 1");
   return linhas?.[0] || {};
 }
 
 // Registrar no audit
 async function registrarAudit(identifier, action, roundId, details) {
-  await db.execute(
+  await dbExecute(
     "INSERT INTO casino_bicho_audit (identifier, action, round_id, details) VALUES (?, ?, ?, ?)",
     [identifier, action, roundId, JSON.stringify(details)]
   );
@@ -133,63 +169,63 @@ async function registrarAudit(identifier, action, roundId, details) {
 // ============================================================
 // ENDPOINT 1: bicho:play — validar aposta + gerar seed
 // ============================================================
-RegisterNetEvent("casino:bicho:play");
-on("casino:bicho:play", async (payload) => {
-  const src = source;
+safeBichoHandler("casino:bicho:play", async (src, cbId, payload) => {
   const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:bicho:play:response", src, { erro: "Sem identificador" });
+  if (!identifier) return emitNet("casino:bicho:response", src, cbId, { erro: "Sem identificador" });
 
   // Mutex — impede 2 apostas simultaneas do mesmo jogador
   await withPlayerLock(identifier, async () => {
 
   const config = await getConfig();
-  if (!config.enabled) return emitNet("casino:bicho:play:response", src, { erro: "Jogo desabilitado" });
+  if (!config.enabled) return emitNet("casino:bicho:response", src, cbId, { erro: "Jogo desabilitado" });
 
   const { mode, animals, bet, clientSeed } = payload || {};
 
   // Validar modo
   const modos = ["simple", "dupla", "tripla", "quadra", "quina"];
-  if (!modos.includes(mode)) return emitNet("casino:bicho:play:response", src, { erro: "Modo invalido" });
+  if (!modos.includes(mode)) return emitNet("casino:bicho:response", src, cbId, { erro: "Modo invalido" });
 
   // Validar animais selecionados
   const expectedCount = { simple: 1, dupla: 2, tripla: 3, quadra: 4, quina: 5 };
   if (!Array.isArray(animals) || animals.length !== expectedCount[mode]) {
-    return emitNet("casino:bicho:play:response", src, { erro: `Modo ${mode} requer ${expectedCount[mode]} animais` });
+    return emitNet("casino:bicho:response", src, cbId, { erro: `Modo ${mode} requer ${expectedCount[mode]} animais` });
   }
   if (animals.some(a => a < 1 || a > 25)) {
-    return emitNet("casino:bicho:play:response", src, { erro: "Animal invalido (1-25)" });
+    return emitNet("casino:bicho:response", src, cbId, { erro: "Animal invalido (1-25)" });
   }
   // Rejeitar animais duplicados (ex: [5,5] no modo dupla)
   if (new Set(animals).size !== animals.length) {
-    return emitNet("casino:bicho:play:response", src, { erro: "Animais duplicados" });
+    return emitNet("casino:bicho:response", src, cbId, { erro: "Animais duplicados" });
   }
 
   // Validar aposta
   const valor = parseInt(bet);
-  if (isNaN(valor) || valor <= 0) return emitNet("casino:bicho:play:response", src, { erro: "Valor invalido" });
+  if (isNaN(valor) || valor <= 0) return emitNet("casino:bicho:response", src, cbId, { erro: "Valor invalido" });
 
   const chaveMax = `bet_max_${mode}`;
   const betMin = config.bet_min || 50;
   const betMax = config[chaveMax] || 5000;
-  if (valor < betMin) return emitNet("casino:bicho:play:response", src, { erro: `Aposta minima: G$${betMin}` });
-  if (valor > betMax) return emitNet("casino:bicho:play:response", src, { erro: `Aposta maxima ${mode}: G$${betMax}` });
+  if (valor < betMin) return emitNet("casino:bicho:response", src, cbId, { erro: `Aposta minima: G$${betMin}` });
+  if (valor > betMax) return emitNet("casino:bicho:response", src, cbId, { erro: `Aposta maxima ${mode}: G$${betMax}` });
 
   // Rate limit
   if (!checkCooldown(identifier, config.cooldown_ms || 3000)) {
-    return emitNet("casino:bicho:play:response", src, { erro: "Aguarde antes de jogar novamente" });
+    return emitNet("casino:bicho:response", src, cbId, { erro: "Aguarde antes de jogar novamente" });
   }
   if (!checkHourlyLimit(identifier, config.max_rounds_per_hour || 60)) {
-    return emitNet("casino:bicho:play:response", src, { erro: "Limite de rodadas por hora atingido" });
+    return emitNet("casino:bicho:response", src, cbId, { erro: "Limite de rodadas por hora atingido" });
   }
 
   // Debito ATOMICO — previne race condition / duplicacao de dinheiro
   // Um unico UPDATE que so executa se saldo >= aposta
-  const debitoResult = await db.execute(
+  const debitoResult = await dbExecute(
     "UPDATE casino_accounts SET gcoin_balance = gcoin_balance - ? WHERE identifier = ? AND gcoin_balance >= ?",
     [valor, identifier, valor]
   );
-  if (!debitoResult || debitoResult.affectedRows === 0) {
-    return emitNet("casino:bicho:play:response", src, { erro: "Saldo insuficiente" });
+  // execute pode retornar numero (affectedRows) ou objeto {affectedRows}
+  const affected = typeof debitoResult === 'number' ? debitoResult : (debitoResult?.affectedRows ?? debitoResult?.changedRows ?? 0);
+  if (affected === 0) {
+    return emitNet("casino:bicho:response", src, cbId, { erro: "Saldo insuficiente" });
   }
 
   // Gerar seeds
@@ -198,7 +234,7 @@ on("casino:bicho:play", async (payload) => {
   const playerSeed = clientSeed || gerarSeed();
 
   // Buscar nonce do jogador
-  const nonceRows = await db.query(
+  const nonceRows = await dbQuery(
     "SELECT COALESCE(MAX(nonce), 0) + 1 AS proximo FROM casino_bicho_rounds WHERE identifier = ?",
     [identifier]
   );
@@ -213,18 +249,18 @@ on("casino:bicho:play", async (payload) => {
 
   // Creditar se ganhou
   if (ganhou) {
-    await db.execute(
+    await dbExecute(
       "UPDATE casino_accounts SET gcoin_balance = gcoin_balance + ? WHERE identifier = ?",
       [payout, identifier]
     );
   }
 
   // Buscar saldo atualizado
-  const novoSaldoRows = await db.query("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
+  const novoSaldoRows = await dbQuery("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
   const novoSaldo = parseFloat(novoSaldoRows?.[0]?.gcoin_balance ?? 0);
 
   // Salvar rodada
-  const insertId = await db.execute(
+  const insertResult = await dbExecute(
     `INSERT INTO casino_bicho_rounds
      (identifier, mode, animals_selected, bet_amount, server_seed, server_seed_hash, client_seed, nonce, result_hash,
       prize_1_milhar, prize_1_grupo, prize_2_milhar, prize_2_grupo, prize_3_milhar, prize_3_grupo,
@@ -241,12 +277,14 @@ on("casino:bicho:play", async (payload) => {
       ganhou ? 1 : 0, payout, multiplicador
     ]
   );
+  // execute retorna objeto {insertId, affectedRows, ...} via callback
+  const roundId = insertResult?.insertId ?? insertResult;
 
   // Registrar transacao no painel (casino_transactions)
   // saldoAntes calculado: saldo atual + aposta - payout (se ganhou)
   const saldoAntes = novoSaldo + valor - (ganhou ? payout : 0);
   const saldoDepois = novoSaldo;
-  await db.execute(
+  await dbExecute(
     `INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [identifier, ganhou ? "win" : "bet", ganhou ? payout : -valor, saldoAntes, saldoDepois, "bicho",
@@ -254,12 +292,12 @@ on("casino:bicho:play", async (payload) => {
   );
 
   // Audit
-  await registrarAudit(identifier, ganhou ? "WIN" : "LOSE", insertId, {
+  await registrarAudit(identifier, ganhou ? "WIN" : "LOSE", roundId, {
     mode, animals, bet: valor, payout, multiplicador, resultados: resultados.map(r => r.grupo)
   });
 
   // Responder ao client
-  emitNet("casino:bicho:play:response", src, {
+  emitNet("casino:bicho:response", src, cbId, {
     sucesso: true,
     resultados,
     ganhou,
@@ -271,7 +309,7 @@ on("casino:bicho:play", async (payload) => {
     nonce,
     serverSeed,
     resultHash: hmacHex,
-    roundId: insertId
+    roundId
   });
 
   }); // fecha withPlayerLock
@@ -281,14 +319,12 @@ on("casino:bicho:play", async (payload) => {
 // ============================================================
 // ENDPOINT 2: bicho:getHistory — ultimas rodadas do jogador
 // ============================================================
-RegisterNetEvent("casino:bicho:getHistory");
-on("casino:bicho:getHistory", async (limite) => {
-  const src = source;
+safeBichoHandler("casino:bicho:getHistory", async (src, cbId, payload) => {
   const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:bicho:getHistory:response", src, []);
+  if (!identifier) return emitNet("casino:bicho:response", src, cbId, []);
 
-  const maxRows = Math.min(parseInt(limite) || 20, 50);
-  const rodadas = await db.query(
+  const maxRows = Math.min(parseInt(payload?.limite || payload) || 20, 50);
+  const rodadas = await dbQuery(
     `SELECT id, mode, animals_selected, bet_amount, won, payout_amount, payout_multiplier,
             prize_1_grupo, prize_2_grupo, prize_3_grupo, prize_4_grupo, prize_5_grupo,
             created_at
@@ -296,31 +332,29 @@ on("casino:bicho:getHistory", async (limite) => {
     [identifier, maxRows]
   );
 
-  emitNet("casino:bicho:getHistory:response", src, rodadas || []);
+  emitNet("casino:bicho:response", src, cbId, rodadas || []);
 });
 
 
 // ============================================================
 // ENDPOINT 3: bicho:verify — verificar provably fair
 // ============================================================
-RegisterNetEvent("casino:bicho:verify");
-on("casino:bicho:verify", async (roundId) => {
-  const src = source;
+safeBichoHandler("casino:bicho:verify", async (src, cbId, payload) => {
   const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:bicho:verify:response", src, { erro: "Sem identificador" });
+  if (!identifier) return emitNet("casino:bicho:response", src, cbId, { erro: "Sem identificador" });
 
-  const rodada = await db.query(
+  const rodada = await dbQuery(
     "SELECT server_seed, server_seed_hash, client_seed, nonce, result_hash FROM casino_bicho_rounds WHERE id = ? AND identifier = ?",
-    [roundId, identifier]
+    [parseInt(payload?.roundId || payload), identifier]
   );
 
-  if (!rodada?.[0]) return emitNet("casino:bicho:verify:response", src, { erro: "Rodada nao encontrada" });
+  if (!rodada?.[0]) return emitNet("casino:bicho:response", src, cbId, { erro: "Rodada nao encontrada" });
 
   const r = rodada[0];
   const hashRecalculado = gerarResultadoHMAC(r.server_seed, r.client_seed, r.nonce);
   const seedHashRecalculado = hashSeed(r.server_seed);
 
-  emitNet("casino:bicho:verify:response", src, {
+  emitNet("casino:bicho:response", src, cbId, {
     serverSeed: r.server_seed,
     serverSeedHash: r.server_seed_hash,
     clientSeed: r.client_seed,
@@ -336,13 +370,11 @@ on("casino:bicho:verify", async (roundId) => {
 // ============================================================
 // ENDPOINT 4: bicho:getConfig — config publica
 // ============================================================
-RegisterNetEvent("casino:bicho:getConfig");
-on("casino:bicho:getConfig", async () => {
-  const src = source;
+safeBichoHandler("casino:bicho:getConfig", async (src, cbId) => {
   const config = await getConfig();
 
   // Retorna so o necessario pro client (sem server seeds)
-  emitNet("casino:bicho:getConfig:response", src, {
+  emitNet("casino:bicho:response", src, cbId, {
     bet_min: config.bet_min,
     bet_max_simple: config.bet_max_simple,
     bet_max_dupla: config.bet_max_dupla,
@@ -366,13 +398,43 @@ on("casino:bicho:getConfig", async () => {
 
 
 // ============================================================
-// ENDPOINT 5: bicho:admin:stats — metricas agregadas (admin)
+// ENDPOINT 5: bicho:rotateSeed — revelar seed atual, gerar novo par
 // ============================================================
-RegisterNetEvent("casino:bicho:admin:stats");
-on("casino:bicho:admin:stats", async () => {
-  const src = source;
+safeBichoHandler("casino:bicho:rotateSeed", async (src, cbId, payload) => {
+  const identifier = getIdentifier(src);
+  if (!identifier) return emitNet("casino:bicho:response", src, cbId, { erro: "Sem identificador" });
 
-  const stats = await db.query(`
+  const ultimaRodada = await dbQuery(
+    "SELECT server_seed, server_seed_hash, client_seed, nonce FROM casino_bicho_rounds WHERE identifier = ? ORDER BY id DESC LIMIT 1",
+    [identifier]
+  );
+
+  const revealedSeed = ultimaRodada?.[0]?.server_seed || gerarSeed();
+  const revealedHash = ultimaRodada?.[0]?.server_seed_hash || hashSeed(revealedSeed);
+
+  const novoServerSeed = gerarSeed();
+  const novoHash = hashSeed(novoServerSeed);
+
+  await registrarAudit(identifier, "SEED_ROTATE", null, {
+    revealedHash,
+    newHash: novoHash,
+    clientSeed: payload?.clientSeed || "",
+  });
+
+  emitNet("casino:bicho:response", src, cbId, {
+    revealedSeed,
+    revealedHash,
+    newSeedHash: novoHash,
+  });
+});
+
+
+// ============================================================
+// ENDPOINT 6: bicho:admin:stats — metricas agregadas (admin)
+// ============================================================
+safeBichoHandler("casino:bicho:admin:stats", async (src, cbId) => {
+
+  const stats = await dbQuery(`
     SELECT
       COUNT(*) AS total_rodadas,
       SUM(bet_amount) AS total_apostado,
@@ -383,7 +445,8 @@ on("casino:bicho:admin:stats", async () => {
     FROM casino_bicho_rounds
   `);
 
-  emitNet("casino:bicho:admin:stats:response", src, stats?.[0] || {});
+  emitNet("casino:bicho:response", src, cbId, stats?.[0] || {});
 });
 
-console.log("[Blackout Casino] Bicho handlers carregados — 5 endpoints ativos");
+console.log("[Blackout Casino] Bicho handlers carregados — 6 endpoints ativos");
+})();

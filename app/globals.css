@@ -133,7 +133,7 @@ html, body, #__next {
 }
 
 body {
-  background: #000;
+  background: transparent;
   overflow: hidden;
   font-family: var(--font-cinzel);
 }
@@ -164,6 +164,11 @@ body {
   100% {
     background-position: 200% center;
   }
+}
+
+@keyframes shimmerBorder {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 @keyframes panelCardShine {
@@ -283,6 +288,17 @@ body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes borderSpin {
+  from { --border-angle: 0deg; }
+  to { --border-angle: 360deg; }
 }
 
 /* Hide scrollbar for carousel */
@@ -481,4 +497,68 @@ html, body, #__next {
 @keyframes modal-header-shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+/* Classic Slot — glow pulsante nas celulas vencedoras */
+@keyframes slot-win-glow-3of {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(212,168,67,0.5), inset 0 0 8px rgba(212,168,67,0.15);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(212,168,67,0.8), 0 0 40px rgba(255,215,0,0.3), inset 0 0 12px rgba(212,168,67,0.25);
+    transform: scale(1.04);
+  }
+}
+@keyframes slot-win-glow-2of {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(212,168,67,0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(212,168,67,0.5), 0 0 24px rgba(255,215,0,0.15);
+    transform: scale(1.02);
+  }
+}
+
+/* Classic Slot — linha horizontal brilhante na payline vencedora */
+@keyframes slot-payline-glow {
+  0%, 100% {
+    opacity: 0.7;
+    box-shadow: 0 0 8px rgba(255,215,0,0.4), 0 0 16px rgba(212,168,67,0.2);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 14px rgba(255,215,0,0.7), 0 0 28px rgba(212,168,67,0.4);
+  }
+}
+
+/* Video Slot — glow pulsante no multiplier orb */
+@keyframes slot-orb-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255,215,0,0.5), 0 0 20px rgba(255,215,0,0.2), inset 0 0 8px rgba(255,215,0,0.15);
+    transform: scale(1.08);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 36px rgba(255,215,0,0.4), inset 0 0 14px rgba(255,215,0,0.25);
+    transform: scale(1.14);
+  }
+}
+
+/* Video Slot — glow pulsante nos clusters vencedores */
+@keyframes slot-cluster-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--cluster-color, rgba(212,168,67,0.4)), inset 0 0 6px var(--cluster-color, rgba(212,168,67,0.1));
+    transform: scale(1.02);
+  }
+  50% {
+    box-shadow: 0 0 18px var(--cluster-color, rgba(212,168,67,0.7)), 0 0 30px var(--cluster-color, rgba(212,168,67,0.3)), inset 0 0 10px var(--cluster-color, rgba(212,168,67,0.15));
+    transform: scale(1.06);
+  }
+}
+
+/* Video Slot — shimmer overlay nos clusters vencedores */
+@keyframes slot-shimmer-sweep {
+  0% { transform: translateX(-200%); }
+  100% { transform: translateX(200%); }
 }

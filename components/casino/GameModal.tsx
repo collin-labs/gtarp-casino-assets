@@ -4,6 +4,10 @@ import { useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { Game } from "@/lib/games";
 import { UI } from "@/lib/assets";
+import LuxuryTooltip from "@/components/shared/LuxuryTooltip";
+
+const isFiveM = typeof window !== "undefined" &&
+  window.location.href.includes("cfx-nui-");
 
 interface GameModalProps {
   game: Game;
@@ -199,10 +203,11 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
         }}
       />
 
-      {/* Raios cônicos giratórios */}
+      {/* Raios cônicos giratórios — desabilitados no FiveM */}
+      {!isFiveM && (
       <motion.div
         initial={{ opacity: 0, scale: 0.3 }}
-        animate={{ opacity: 0.35, scale: 1.4 }}
+        animate={{ opacity: 0.08, scale: 1.4 }}
         transition={{ duration: 1.5, ease: "easeOut" }}
         style={{
           position: "absolute",
@@ -220,11 +225,13 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
           pointerEvents: "none",
         }}
       />
+      )}
 
-      {/* Halo central */}
+      {/* Halo central — desabilitado no FiveM */}
+      {!isFiveM && (
       <motion.div
         initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
+        animate={{ opacity: 0.3, scale: 1 }}
         transition={{ duration: 0.9, ease: premiumEase }}
         style={{
           position: "absolute",
@@ -234,13 +241,14 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
           left: "50%",
           transform: "translate(-50%, -50%)",
           background:
-            "radial-gradient(circle, rgba(255,215,0,0.12) 0%, rgba(0,230,118,0.04) 40%, transparent 70%)",
+            "radial-gradient(circle, rgba(255,215,0,0.04) 0%, rgba(0,230,118,0.015) 40%, transparent 70%)",
           borderRadius: "50%",
           filter: "blur(35px)",
           zIndex: 2,
           pointerEvents: "none",
         }}
       />
+      )}
 
       {/* ============================================ */}
       {/* CONTEÚDO PRINCIPAL                           */}
@@ -340,6 +348,7 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
         {/* ============================== */}
         {/* BOTÃO JOGAR AGORA (Hero style) */}
         {/* ============================== */}
+        <LuxuryTooltip text={isBR ? `Iniciar ${game.labelBR}` : `Start ${game.labelEN}`} position="bottom" delay={600}>
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -365,7 +374,8 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
             backgroundPosition: "center",
           }}
         >
-          {/* Fio de luz girando — copiado da Hero */}
+          {/* Fio de luz — so na web, desativado no FiveM */}
+          {!isFiveM && (
           <div
             style={{
               position: "absolute",
@@ -384,11 +394,12 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
                 position: "absolute",
                 inset: "-50%",
                 background:
-                  "conic-gradient(from 0deg, transparent 0%, transparent 70%, #00E676 80%, #FFD700 90%, transparent 100%)",
+                  "conic-gradient(from 0deg, transparent 0%, transparent 70%, #D4A843 80%, #FFD700 90%, transparent 100%)",
                 animation: "spin 3s linear infinite",
               }}
             />
           </div>
+          )}
           <span
             style={{
               position: "absolute",
@@ -401,6 +412,7 @@ export default function GameModal({ game, lang, onClose, onPlay }: GameModalProp
             {isBR ? "JOGAR AGORA" : "PLAY NOW"}
           </span>
         </motion.button>
+        </LuxuryTooltip>
 
         {/* VOLTAR */}
         <motion.button

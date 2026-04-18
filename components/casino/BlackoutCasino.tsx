@@ -12,18 +12,23 @@ import GoldParticles from "./GoldParticles";
 import GameModal from "./GameModal";
 import ComingSoon from "./ComingSoon";
 import DepositModal from "./DepositModal";
+import AdminPanel from "./AdminPanel";
 import CasinoLogo from "./CasinoLogo";
+import CasinoLoading from "./CasinoLoading";
 import { useRipple } from "@/hooks/use-ripple";
 import { useSoundManager } from "@/hooks/use-sound-manager";
 import { useGameAPI } from "@/hooks/use-game-api";
+import { useCurrencyConfig } from "@/hooks/use-currency-config";
+import LuxuryTooltip from "@/components/shared/LuxuryTooltip";
 import { CrashGame } from "@/components/games/crash";
 import { AnimalGame } from "@/components/games/bicho";
 import { SlotsGame } from "@/components/games/slots";
 
 export default function BlackoutCasino() {
-  const { lang, setLang, activeTab, setActiveTab, selectedGame, setSelectedGame, activeGame, setActiveGame, saldo } = useCasino();
+  const { lang, setLang, activeTab, setActiveTab, selectedGame, setSelectedGame, activeGame, setActiveGame, saldo, setSaldo, isOpen, setIsOpen } = useCasino();
   const [panelSize, setPanelSize] = useState({ w: 0, h: 0 });
   const [showDeposit, setShowDeposit] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const mousePos = useRef({ x: -9999, y: -9999 });
   const [mouseXY, setMouseXY] = useState({ x: -9999, y: -9999 });
@@ -55,40 +60,70 @@ export default function BlackoutCasino() {
   // ── FASE 8: Ripple + Sons ──
   const ripple = useRipple();
   const sound = useSoundManager();
-  const { getSaldo } = useGameAPI();
+  const { getSaldo, isFiveM } = useGameAPI();
+  const { config: cc, formatCurrency } = useCurrencyConfig();
 
   // ESC hierarquico: fecha SO o overlay mais recente (LIFO — fonte #3 cssscript)
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (activeGame) { setActiveGame(null); sound.play("click"); }
-      else if (showDeposit) { setShowDeposit(false); sound.play("click"); }
-      else if (selectedGame) { setSelectedGame(null); sound.play("click"); }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (activeGame) { setActiveGame(null); sound.play("click"); }
+        else if (showAdmin) { setShowAdmin(false); sound.play("click"); }
+        else if (showDeposit) { setShowDeposit(false); sound.play("click"); }
+        else if (selectedGame) { setSelectedGame(null); sound.play("click"); }
+        else {
+          setIsOpen(false);
+          fetch("https://bc_casino/casino:panel:close", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => {});
+        }
+      }
+      // SHIFT+F5: abre/fecha admin (atalho oculto)
+      if (e.key === "F5" && e.shiftKey) {
+        e.preventDefault();
+        if (showAdmin) {
+          setShowAdmin(false);
+          sound.play("click");
+        } else if (!selectedGame && !activeGame && !showDeposit) {
+          setShowAdmin(true);
+          sound.play("click");
+        }
+      }
     };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [activeGame, showDeposit, selectedGame]);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [activeGame, showAdmin, showDeposit, selectedGame]);
 
   // Prefetch saldo assim que o painel monta (antes da intro terminar)
   useEffect(() => {
     getSaldo().then((val) => {
-      if (val && val !== 500) {
-        // Atualiza so se vier valor diferente do mock
-        // setSaldo via context sera integrado quando backend real ativar
+      if (val != null && val !== 500) {
+        setSaldo(val);
       }
     }).catch(() => {});
   }, []);
 
   // ── FASE 9: Sequencia cinematografica de entrada ──
   const [introStage, setIntroStage] = useState(0);
-  // 0=nada, 1=overlay, 2=painel, 3=letreiro, 4=dock (tudo visivel)
+  const [showLoading, setShowLoading] = useState(false);
+  const loadTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Loading + intro: FiveM=1200ms, web=500ms (useRef protege do StrictMode cleanup)
   useEffect(() => {
-    const t1 = setTimeout(() => setIntroStage(1), 50);    // overlay
-    const t2 = setTimeout(() => setIntroStage(2), 150);   // painel
-    const t3 = setTimeout(() => setIntroStage(3), 600);   // letreiro
-    const t4 = setTimeout(() => setIntroStage(4), 850);   // dock
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
-  }, []);
+    if (!isOpen) { setIntroStage(0); setShowLoading(false); return; }
+    loadTimers.current.forEach(clearTimeout);
+    const dur = isFiveM ? 1200 : 500;
+    setShowLoading(true);
+    loadTimers.current = [
+      setTimeout(() => setShowLoading(false), dur),
+      setTimeout(() => setIntroStage(1), dur + 50),
+      setTimeout(() => setIntroStage(2), dur + 150),
+      setTimeout(() => setIntroStage(3), dur + 600),
+      setTimeout(() => setIntroStage(4), dur + 850),
+    ];
+  }, [isOpen, isFiveM]);
 
   // Medir painel para Canvas
   useEffect(() => {
@@ -133,8 +168,14 @@ export default function BlackoutCasino() {
     };
   }, []);
 
+  // Nao renderiza nada enquanto o casino estiver fechado
+  if (!isOpen) return null;
+
   return (
     <>
+      {/* LOADING SCREEN — aparece instantaneamente ao pressionar F5 */}
+      <CasinoLoading visible={showLoading} />
+
       {/* CAMADA 0+1: OVERLAY ESCURO (fullscreen) */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -150,7 +191,6 @@ export default function BlackoutCasino() {
           alignItems: "center",
           justifyContent: "center",
           background: "rgba(0,0,0,0.78)",
-          backdropFilter: "blur(3px)",
           fontFamily: "var(--font-cinzel)",
         }}
       >
@@ -324,7 +364,7 @@ export default function BlackoutCasino() {
               }}
               whileTap={{ scale: 0.95 }}
               onClick={() => { sound.play("click"); setShowDeposit(true); }}
-              title={lang === "br" ? "Depositar ou sacar GCoin" : "Deposit or withdraw GCoin"}
+              title={lang === "br" ? `Depositar ou sacar ${cc.name}` : `Deposit or withdraw ${cc.name}`}
               className="bg-transparent p-0"
               style={{
                 position: "absolute",
@@ -355,7 +395,7 @@ export default function BlackoutCasino() {
                   letterSpacing: "1.5px",
                 }}
               >
-                {saldo.toLocaleString("pt-BR")}
+                {saldo.toLocaleString(lang === "br" ? "pt-BR" : "en-US")}
               </span>
               <span
                 style={{
@@ -367,7 +407,7 @@ export default function BlackoutCasino() {
                   marginLeft: "-4px",
                 }}
               >
-                GC
+                {cc.symbol}
               </span>
             </motion.button>
 
@@ -400,12 +440,14 @@ export default function BlackoutCasino() {
                 <AnimalGame
                   key="anima-game"
                   onBack={() => setActiveGame(null)}
+                  onDeposit={() => setShowDeposit(true)}
                 />
               )}
               {activeGame === "slots" && (
                 <SlotsGame
                   key="slots"
                   onBack={() => setActiveGame(null)}
+                  onDeposit={() => setShowDeposit(true)}
                 />
               )}
               {activeGame && activeGame !== "crash" && activeGame !== "anima-game" && activeGame !== "slots" && (
@@ -454,8 +496,15 @@ export default function BlackoutCasino() {
             )}
           </AnimatePresence>
 
+          {/* ADMIN PANEL */}
+          <AnimatePresence>
+            {showAdmin && (
+              <AdminPanel onClose={() => setShowAdmin(false)} lang={lang} />
+            )}
+          </AnimatePresence>
+
           {/* LOGO BLACKOUT CASINO — escudo cravado na borda esquerda, so na aba CASSINO */}
-          <CasinoLogo visible={introStage >= 3 && activeTab === 0 && !selectedGame && !activeGame && !showDeposit} />
+          <CasinoLogo visible={introStage >= 3 && activeTab === 0 && !selectedGame && !activeGame && !showDeposit && !showAdmin} />
 
           {/* LETREIRO -- fora do painel, na borda entre header e hero */}
           <div
@@ -472,7 +521,7 @@ export default function BlackoutCasino() {
             <motion.div
               initial={{ opacity: 0, y: -35, scale: 0.8 }}
               animate={
-                (selectedGame || activeGame || showDeposit)
+                (selectedGame || activeGame || showDeposit || showAdmin)
                   ? { opacity: 0, y: -20, scale: 0.9 }
                   : introStage >= 3
                     ? { opacity: 1, y: 0, scale: 1 }
@@ -559,13 +608,13 @@ export default function BlackoutCasino() {
               transform: "translate(-50%, 42%)",
               width: "60%",
               zIndex: 20,
-              pointerEvents: (selectedGame || activeGame || showDeposit) ? "none" : "auto",
+              pointerEvents: (selectedGame || activeGame || showDeposit || showAdmin) ? "none" : "auto",
             }}
           >
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={
-                (selectedGame || activeGame || showDeposit)
+                (selectedGame || activeGame || showDeposit || showAdmin)
                   ? { opacity: 0, y: 40, scale: 0.9 }
                   : introStage >= 4
                     ? { opacity: 1, y: 0, scale: 1 }

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Item Atualizado — HUNT Store</title>
+</head>
+<body style="margin:0; padding:0; background:#0A0A0A; font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px; margin:0 auto; padding:40px 20px;">
+    <div style="text-align:center; margin-bottom:32px;">
+      <img src="{{logoSrc}}" alt="HUNT" width="160" height="auto" style="display:inline-block; max-width:160px; height:auto;" />
+    </div>
+    <div style="background:#0F0F0F; border:1px solid rgba(255,255,255,0.05); border-radius:16px; overflow:hidden;">
+      <div style="height:3px; background:linear-gradient(90deg, #F59E0B, #D97706);"></div>
+      <div style="padding:32px;">
+        <div style="text-align:center; margin-bottom:24px;">
+          <div style="width:56px; height:56px; margin:0 auto 16px; background:rgba(245,158,11,0.1); border-radius:50%; line-height:56px; font-size:28px;">&#10003;</div>
+          <h1 style="color:#fff; font-size:22px; margin:0; font-weight:bold;">Item Atualizado!</h1>
+        </div>
+        <p style="color:#ccc; font-size:14px; line-height:1.7; margin:0 0 24px;">
+          Olá <strong style="color:#fff;">{{userName}}</strong>,<br><br>
+          O item <strong style="color:#F59E0B;">{{itemName}}</strong> agora tem preço de venda definido. Você já pode vendê-lo no seu inventário.
+        </p>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:20px; margin-bottom:24px;">
+          <table style="width:100%; border-collapse:collapse;">
+            <tr>
+              <td style="color:#888; font-size:13px; padding:4px 0;">Item</td>
+              <td style="color:#fff; font-size:13px; padding:4px 0; text-align:right;">{{itemName}}</td>
+            </tr>
+            <tr>
+              <td style="color:#888; font-size:13px; padding:4px 0;">Caixa</td>
+              <td style="color:#fff; font-size:13px; padding:4px 0; text-align:right;">{{boxName}}</td>
+            </tr>
+            <tr>
+              <td style="color:#888; font-size:13px; padding:4px 0;">Tier</td>
+              <td style="color:#fff; font-size:13px; padding:4px 0; text-align:right;">{{itemTier}}</td>
+            </tr>
+          </table>
+        </div>
+        <div style="text-align:center; margin-bottom:24px;">
+          <a href="{{siteUrl}}/dashboard/inventario" style="display:inline-block; background:linear-gradient(135deg, #F59E0B, #D97706); color:#000; text-decoration:none; font-weight:bold; font-size:14px; padding:14px 40px; border-radius:12px;">Ir pro Inventário</a>
+        </div>
+        <p style="color:#666; font-size:12px; line-height:1.6; margin:0; text-align:center;">
+          Se você não solicitou isto, ignore este email.
+        </p>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:24px;">
+      <p style="color:#444; font-size:11px; margin:0;">HUNT Store — joguekush.com</p>
+    </div>
+  </div>
+</body>
+</html>

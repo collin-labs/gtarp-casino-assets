@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCasino } from "@/contexts/CasinoContext";
+import { GameHeader } from "@/components/shared";
+import { useCurrencyConfig } from "@/hooks/use-currency-config";
 import { useCrashSound } from "./useCrashSound";
 import { CrashCanvas } from "./CrashCanvas";
 import { CrashControls } from "./CrashControls";
@@ -78,6 +80,7 @@ function generateSeed(): string {
 export default function CrashGame({ onBack }: { onBack: () => void }) {
   const { saldo, setSaldo, lang } = useCasino();
   const sound = useCrashSound();
+  const { config: cc } = useCurrencyConfig();
   
   // Estado do jogo
   const [phase, setPhase] = useState<CrashPhase>("WAITING");
@@ -382,203 +385,17 @@ export default function CrashGame({ onBack }: { onBack: () => void }) {
       {/* ===================================================================
           HEADER — Logo, Saldo, Controles
           =================================================================== */}
-      <header
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "clamp(8px, 1.5vw, 16px) clamp(12px, 2vw, 24px)",
-          borderBottom: "1px solid rgba(212,168,67,0.2)",
-          background: "linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%)",
-        }}
-      >
-        {/* Botao Voltar */}
-        <motion.button
-          onClick={onBack}
-          whileHover={{ scale: 1.05, borderColor: "rgba(212,168,67,0.8)" }}
-          whileTap={{ scale: 0.95 }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "clamp(6px, 0.8vw, 10px)",
-            padding: "clamp(6px, 1vw, 12px) clamp(12px, 1.5vw, 20px)",
-            background: "rgba(10,10,10,0.8)",
-            border: "1px solid rgba(212,168,67,0.4)",
-            borderRadius: "8px",
-            cursor: "pointer",
-            color: "#D4A843",
-            fontFamily: "var(--font-cinzel)",
-            fontSize: "clamp(10px, 1vw, 14px)",
-            fontWeight: 600,
-            letterSpacing: "1px",
-            textTransform: "uppercase",
-          }}
-        >
-          <span style={{ fontSize: "clamp(14px, 1.2vw, 18px)" }}>←</span>
-          {lang === "br" ? "VOLTAR" : "BACK"}
-        </motion.button>
-
-        {/* Logo Crash */}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            alignItems: "center",
-            gap: "clamp(8px, 1vw, 12px)",
-          }}
-        >
-          <img
-            src={ASSETS.logoCrash}
-            alt="Crash"
-            style={{
-              height: "clamp(30px, 4vw, 50px)",
-              filter: "drop-shadow(0 0 10px rgba(212,168,67,0.5))",
-            }}
-          />
-        </div>
-
-        {/* Saldo + Botoes */}
-        <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 1vw, 16px)" }}>
-          {/* Botao Historico */}
-          <motion.button
-            onClick={() => setShowHistoryPanel(true)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            style={{
-              width: "clamp(32px, 3vw, 44px)",
-              height: "clamp(32px, 3vw, 44px)",
-              borderRadius: "50%",
-              background: "rgba(10,10,10,0.8)",
-              border: "1px solid rgba(212,168,67,0.4)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-            }}
-            title={lang === "br" ? "Histórico" : "History"}
-          >
-            <img
-              src={ASSETS.iconHistory}
-              alt="Histórico"
-              style={{ width: "60%", height: "60%" }}
-            />
-          </motion.button>
-
-          {/* Botao Provably Fair */}
-          <motion.button
-            onClick={() => {
-              if (history.length > 0) {
-                setSelectedRound(history[0]);
-                setShowProvablyFair(true);
-              }
-            }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            style={{
-              width: "clamp(32px, 3vw, 44px)",
-              height: "clamp(32px, 3vw, 44px)",
-              borderRadius: "50%",
-              background: "rgba(10,10,10,0.8)",
-              border: "1px solid rgba(212,168,67,0.4)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-            }}
-            title="Provably Fair"
-          >
-            <img
-              src={ASSETS.iconProvablyFair}
-              alt="Provably Fair"
-              style={{ width: "60%", height: "60%" }}
-            />
-          </motion.button>
-
-          {/* Toggle Som */}
-          <motion.button
-            onClick={() => {
-              setSoundEnabled(!soundEnabled);
-              if (!soundEnabled) sound.playClick();
-            }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            style={{
-              width: "clamp(32px, 3vw, 44px)",
-              height: "clamp(32px, 3vw, 44px)",
-              borderRadius: "50%",
-              background: "rgba(10,10,10,0.8)",
-              border: "1px solid rgba(212,168,67,0.4)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-            }}
-          >
-            <img
-              src={soundEnabled ? ASSETS.iconSoundOn : ASSETS.iconSoundOff}
-              alt={soundEnabled ? "Som ligado" : "Som desligado"}
-              style={{
-                width: "60%",
-                height: "60%",
-                opacity: soundEnabled ? 1 : 0.5,
-              }}
-            />
-          </motion.button>
-
-          {/* Saldo */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "clamp(6px, 0.8vw, 10px)",
-              padding: "clamp(6px, 1vw, 10px) clamp(12px, 1.5vw, 18px)",
-              background: "linear-gradient(135deg, rgba(10,18,8,0.95), rgba(5,12,3,0.98))",
-              border: "1px solid rgba(212,168,67,0.5)",
-              borderRadius: "10px",
-              boxShadow: "0 0 15px rgba(212,168,67,0.15), inset 0 0 10px rgba(0,0,0,0.4)",
-            }}
-          >
-            <img
-              src={ASSETS.iconGcoin}
-              alt="GCoin"
-              style={{
-                width: "clamp(16px, 1.8vw, 24px)",
-                height: "clamp(16px, 1.8vw, 24px)",
-              }}
-            />
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "clamp(12px, 1.4vw, 18px)",
-                fontWeight: 700,
-                color: "#00E676",
-                textShadow: "0 0 10px rgba(0,230,118,0.5)",
-                letterSpacing: "1px",
-              }}
-            >
-              {saldo.toLocaleString("pt-BR")}
-            </span>
-            <span
-              style={{
-                fontFamily: "var(--font-cinzel)",
-                fontSize: "clamp(8px, 0.8vw, 11px)",
-                color: "rgba(212,168,67,0.7)",
-                fontWeight: 600,
-                letterSpacing: "1.5px",
-              }}
-            >
-              GC
-            </span>
-          </div>
-        </div>
-      </header>
+      <GameHeader
+        onBack={onBack}
+        title={lang === "br" ? "CRASH" : "CRASH"}
+        logo={ASSETS.logoCrash}
+        balance={saldo}
+        lang={lang === "en" ? "in" : lang as "br"}
+        actions={[
+          { id: "history", icon: ASSETS.iconHistory, tooltip: lang === "br" ? "Histórico" : "History", onClick: () => setShowHistoryPanel(true) },
+          { id: "pf", icon: ASSETS.iconProvablyFair, tooltip: "Provably Fair", onClick: () => setShowProvablyFair(true) },
+        ]}
+      />
 
       {/* ===================================================================
           MAIN — Canvas + Controles
@@ -717,7 +534,7 @@ export default function CrashGame({ onBack }: { onBack: () => void }) {
                             marginTop: "clamp(8px, 1vw, 12px)",
                           }}
                         >
-                          +{(betAmount * cashoutMultiplier).toFixed(2)} GC
+                          +{(betAmount * cashoutMultiplier).toFixed(2)} {cc.symbol}
                         </div>
                       </>
                     )}

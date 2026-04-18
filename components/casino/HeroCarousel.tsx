@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Game } from "@/lib/games";
 import { UI } from "@/lib/assets";
 
+const isFiveM = typeof window !== "undefined" &&
+  window.location.href.includes("cfx-nui-");
+
 interface HeroProps {
   lang: "br" | "in";
   games: Game[];
@@ -198,7 +201,8 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
               }}
               className="cta-pulse"
             >
-              {/* Fio de luz girando na borda */}
+              {/* Feixe de luz na borda — so na web, desativado no FiveM (Chrome 103 nao renderiza corretamente) */}
+              {!isFiveM && (
               <div
                 style={{
                   position: "absolute",
@@ -215,12 +219,13 @@ export default function HeroCarousel({ lang, games, onGameSelect, activeTab }: H
                 <div
                   style={{
                     position: "absolute",
-                    inset: "-50%",
-                    background: "conic-gradient(from 0deg, transparent 0%, transparent 70%, #00E676 80%, #FFD700 90%, transparent 100%)",
-                    animation: "spin 3s linear infinite",
+                    inset: 0,
+                    background: "conic-gradient(from var(--border-angle), transparent 0%, transparent 78%, rgba(0,230,118,0.5) 86%, rgba(255,215,0,0.7) 92%, transparent 100%)",
+                    animation: "borderSpin 4s linear infinite",
                   }}
                 />
               </div>
+              )}
               <span
                 style={{
                   display: "flex",

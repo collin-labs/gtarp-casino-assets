@@ -107,9 +107,8 @@ export default function GameModal({
             position: "absolute",
             inset: 0,
             zIndex: 90,
-            background: "rgba(0,0,0,0.88)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
+            background: "rgba(0,0,0,0.92)",
+            // backdrop-filter REMOVIDO — causa flickering no FiveM CEF (citizenfx/fivem#3843)
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

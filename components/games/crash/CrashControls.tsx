@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { CrashPhase } from "./CrashGame";
+import { useCurrencyConfig } from "@/hooks/use-currency-config";
 
 // ===========================================================================
 // CRASH CONTROLS — Painel de Aposta e Cashout
@@ -48,6 +49,7 @@ export function CrashControls({
   onCashout,
   lang,
 }: CrashControlsProps) {
+  const { config: cc } = useCurrencyConfig();
   const canBet = (phase === "WAITING" || phase === "BETTING") && !hasPlacedBet;
   const canCashout = phase === "RISING" && hasPlacedBet && !hasCashedOut;
   const potentialWin = betAmount * multiplier;
@@ -192,6 +194,23 @@ export function CrashControls({
             </motion.button>
           ))}
         </div>
+      </div>
+
+      {/* Legenda contextual */}
+      <div style={{
+        textAlign: "center", fontSize: "clamp(8px, 0.8vw, 10px)",
+        fontFamily: "sans-serif", color: "rgba(255,255,255,0.35)",
+        lineHeight: 1.4, minHeight: 14,
+      }}>
+        {phase === "RISING" && hasPlacedBet && !hasCashedOut
+          ? (lang === "br"
+            ? `Cashout agora: ${multiplier.toFixed(2)}x = ${potentialWin.toFixed(2)} ${cc.symbol}`
+            : `Cash out now: ${multiplier.toFixed(2)}x = ${potentialWin.toFixed(2)} ${cc.symbol}`)
+          : hasCashedOut
+            ? (lang === "br" ? "Lucro garantido!" : "Profit secured!")
+            : phase === "CRASHED"
+              ? (lang === "br" ? "Rodada encerrada — aguarde a proxima" : "Round ended — wait for next")
+              : (lang === "br" ? "Aposte e saia antes do crash para ganhar" : "Bet and cash out before crash to win")}
       </div>
 
       {/* ================================================================
@@ -383,7 +402,7 @@ export function CrashControls({
               textShadow: "0 0 10px rgba(255,215,0,0.5)",
             }}
           >
-            {potentialWin.toFixed(2)} GC
+            {potentialWin.toFixed(2)} {cc.symbol}
           </span>
         </motion.button>
       ) : (
@@ -464,7 +483,7 @@ export function CrashControls({
               textShadow: "0 0 15px rgba(0,230,118,0.6)",
             }}
           >
-            {potentialWin.toFixed(2)} GC
+            {potentialWin.toFixed(2)} {cc.symbol}
           </div>
         </div>
       )}

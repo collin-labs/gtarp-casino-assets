@@ -1,5 +1,7 @@
 export { default as GameModal } from "./GameModal";
 export type { GameModalProps } from "./GameModal";
+export { default as GameHeader } from "./GameHeader";
+export type { GameHeaderProps, HeaderAction } from "./GameHeader";
 export { default as HistoryModal, WinBadge, WinAmount, MultiBadge } from "./HistoryModal";
 export type { HistoryModalProps, HistoryColumn } from "./HistoryModal";
 export { default as ProvablyFairModal } from "./ProvablyFairModal";
@@ -7,3 +9,6 @@ export type { ProvablyFairModalProps, PFData, SeedRecord } from "./ProvablyFairM
 export { default as PaytableModal } from "./PaytableModal";
 export type { PaytableModalProps, PaytableSymbol, PaytableCategory } from "./PaytableModal";
 export { useEscStack } from "./useEscStack";
+export { default as LuxuryTooltip } from "./LuxuryTooltip";
+export { default as HelpPanel } from "./HelpPanel";
+export { sha256, hmacSHA256, generateSecureSeed, createSeedPair } from "./crypto";

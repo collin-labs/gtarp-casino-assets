@@ -5,6 +5,52 @@
 
 const crypto = require("crypto");
 
+// Helper DB: callback explicito wrappado em Promise (unico padrao que funciona no FiveM JS)
+// Timeout 5s: se oxmysql nao chamar callback (ex: erro silencioso), resolve null e loga
+function dbQuery(sql, params) {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => {
+      console.log(`[CASINO-DB] TIMEOUT query: ${sql.substring(0, 80)}`);
+      resolve(null);
+    }, 5000);
+    exports.oxmysql.query(sql, params || [], (result) => {
+      clearTimeout(t);
+      resolve(result);
+    });
+  });
+}
+function dbExecute(sql, params) {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => {
+      console.log(`[CASINO-DB] TIMEOUT execute: ${sql.substring(0, 80)}`);
+      resolve(null);
+    }, 5000);
+    exports.oxmysql.execute(sql, params || [], (result) => {
+      clearTimeout(t);
+      resolve(result);
+    });
+  });
+}
+
+// Wrapper: todo handler async com try/catch + logging
+const SLOT_RESPONSE = "casino:slot:response";
+const _slotOn = on;
+function safeSlotHandler(eventName, handler) {
+  RegisterNetEvent(eventName);
+  _slotOn(eventName, async (...args) => {
+    const src = source;
+    const cbId = args[0];
+    console.log(`[CASINO-SLOT] ${eventName} src=${src} cbId=${cbId}`);
+    try {
+      await handler(src, cbId, args[1] || {});
+    } catch (err) {
+      console.log(`[CASINO-SLOT] ${eventName} ERRO: ${err.message}`);
+      console.log(`[CASINO-SLOT] Stack: ${err.stack}`);
+      emitNet(SLOT_RESPONSE, src, cbId, { error: "server_error", message: err.message });
+    }
+  });
+}
+
 // Rate limit por jogador: { identifier: { lastSpin: timestamp, spinsThisMinute: N, minuteStart: timestamp } }
 const rateLimits = {};
 
@@ -99,12 +145,12 @@ function selectClassicSymbol(randomValue) {
 // -- ENGINE SERVER-SIDE --
 
 function generateVideoGrid(serverSeed, clientSeed, nonce, isFS) {
-  const numbers = generateNumbers(serverSeed, clientSeed, nonce, 40);
-  const grid = []; // 6 colunas x 5 linhas
+  const numbers = generateNumbers(serverSeed, clientSeed, nonce, 42);
+  const grid = []; // 8 colunas x 4 linhas
   let idx = 0;
-  for (let col = 0; col < 6; col++) {
+  for (let col = 0; col < 8; col++) {
     const column = [];
-    for (let row = 0; row < 5; row++) {
+    for (let row = 0; row < 4; row++) {
       const sym = selectSymbol(numbers[idx], isFS);
       const isMult = sym.id === "multiplier_orb";
       const multVal = isMult ? MULTIPLIER_VALUES_FS[numbers[idx] % MULTIPLIER_VALUES_FS.length] : 0;
@@ -118,8 +164,8 @@ function generateVideoGrid(serverSeed, clientSeed, nonce, isFS) {
 
 function detectWins(grid) {
   const counts = {};
-  for (let col = 0; col < 6; col++) {
-    for (let row = 0; row < 5; row++) {
+  for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < 4; row++) {
       const cell = grid[col][row];
       if (cell.symbolId === "multiplier_orb") continue;
       if (!counts[cell.symbolId]) counts[cell.symbolId] = [];
@@ -154,18 +200,19 @@ function processVideoSpin(bet, anteBet, serverSeed, clientSeed, nonce, isFS, jac
 
   // Contar scatters
   let scatterCount = 0;
-  for (let col = 0; col < 6; col++) {
-    for (let row = 0; row < 5; row++) {
+  for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < 4; row++) {
       if (grid[col][row].isScatter) scatterCount++;
     }
   }
 
-  // Tumble loop (max 20)
+  // Tumble loop (max 20) — captura cada passo pra animacao no client
   let totalWin = 0;
   let totalMultiplier = 1;
   let tumbles = 0;
   let currentGrid = grid;
   let tumbleNonce = nonce * 100;
+  const tumbleSteps = [];
 
   for (let attempt = 0; attempt < 20; attempt++) {
     const wins = detectWins(currentGrid);
@@ -173,8 +220,8 @@ function processVideoSpin(bet, anteBet, serverSeed, clientSeed, nonce, isFS, jac
     tumbles++;
 
     // Multiplicadores
-    for (let col = 0; col < 6; col++) {
-      for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 8; col++) {
+      for (let row = 0; row < 4; row++) {
         if (currentGrid[col][row].isMultiplier && currentGrid[col][row].multiplierValue > 0) {
           totalMultiplier += currentGrid[col][row].multiplierValue;
         }
@@ -194,9 +241,9 @@ function processVideoSpin(bet, anteBet, serverSeed, clientSeed, nonce, isFS, jac
     const newNumbers = generateNumbers(serverSeed, clientSeed, tumbleNonce, 30);
     const newGrid = [];
     let newIdx = 0;
-    for (let col = 0; col < 6; col++) {
+    for (let col = 0; col < 8; col++) {
       const surviving = currentGrid[col].filter((_, row) => !removed.has(`${col}-${row}`));
-      const needed = 5 - surviving.length;
+      const needed = 4 - surviving.length;
       const newCells = [];
       for (let i = 0; i < needed; i++) {
         const sym = selectSymbol(newNumbers[newIdx], isFS);
@@ -207,6 +254,20 @@ function processVideoSpin(bet, anteBet, serverSeed, clientSeed, nonce, isFS, jac
       }
       newGrid.push([...newCells, ...surviving].map((cell, row) => ({ ...cell, row })));
     }
+
+    // Capturar passo pra client animar
+    tumbleSteps.push({
+      winClusters: wins,
+      stepWin,
+      totalWin,
+      // Grid APOS cascade (novos simbolos ja caidos)
+      gridAfter: newGrid.map(col => col.map(cell => ({
+        symbolId: cell.symbolId, row: cell.row, col: cell.col,
+        isScatter: cell.isScatter, isMultiplier: cell.isMultiplier,
+        multiplierValue: cell.multiplierValue,
+      }))),
+    });
+
     currentGrid = newGrid;
   }
 
@@ -224,7 +285,7 @@ function processVideoSpin(bet, anteBet, serverSeed, clientSeed, nonce, isFS, jac
 
   return {
     totalBet, totalWin: totalWin + jackpotWin, totalMultiplier, tumbles, scatterCount,
-    triggeredFS, fsAwarded, isJackpot, jackpotWin, newJackpotPool, gridHash: hashSeed(JSON.stringify(grid)),
+    triggeredFS, fsAwarded, isJackpot, jackpotWin, newJackpotPool, grid, tumbleSteps, gridHash: hashSeed(JSON.stringify(grid)),
   };
 }
 
@@ -247,7 +308,7 @@ function processClassicSpin(bet, serverSeed, clientSeed, nonce) {
     }
   }
 
-  return { totalBet: bet, totalWin, gridHash: hashSeed(JSON.stringify(visibleReels)) };
+  return { totalBet: bet, totalWin, visibleReels, gridHash: hashSeed(JSON.stringify(visibleReels)) };
 }
 
 // -- HANDLERS --
@@ -255,9 +316,13 @@ function processClassicSpin(bet, serverSeed, clientSeed, nonce) {
 async function loadConfig() {
   const now = Date.now();
   if (configCache && now - configLastLoad < 60000) return configCache;
-  const rows = await exports.oxmysql.query_async("SELECT chave, valor FROM casino_config WHERE chave LIKE 'slot_%'");
+  const rows = await dbQuery("SELECT chave, valor FROM casino_config WHERE chave LIKE 'slot_%'", []);
   configCache = {};
-  for (const row of rows) configCache[row.chave] = row.valor;
+  if (Array.isArray(rows)) {
+    for (const row of rows) configCache[row.chave] = row.valor;
+  } else {
+    console.log(`[CASINO-SLOT] loadConfig: rows nao eh array, tipo=${typeof rows}, valor=${JSON.stringify(rows)}`);
+  }
   configLastLoad = now;
   return configCache;
 }
@@ -290,23 +355,23 @@ async function getOrCreateSession(identifier, mode, clientSeed) {
   }
   const serverSeed = generateServerSeed();
   const serverSeedHash = hashSeed(serverSeed);
-  const result = await exports.oxmysql.insert_async(
+  const insertResult = await dbExecute(
     "INSERT INTO casino_slot_sessions (identifier, mode, server_seed, server_seed_hash, client_seed) VALUES (?, ?, ?, ?, ?)",
     [identifier, mode, serverSeed, serverSeedHash, clientSeed]
   );
-  const session = { sessionId: result, serverSeed, serverSeedHash, clientSeed, nonce: 0, mode };
+  const sessionId = insertResult?.insertId ?? insertResult;
+  const session = { sessionId, serverSeed, serverSeedHash, clientSeed, nonce: 0, mode };
   sessions[identifier] = session;
   return session;
 }
 
 // SPIN VIDEO
-RegisterNuiCallback("casino:slot:spin", async (payload, cb) => {
-  const source = global.source;
-  const identifier = GetPlayerIdentifier(source, 0);
-  if (!identifier) return cb({ error: "no_identifier" });
+safeSlotHandler("casino:slot:spin", async (src, cbId, payload) => {
+  const identifier = GetPlayerIdentifier(src, 0);
+  if (!identifier) return emitNet("casino:slot:response", src, cbId, { error: "no_identifier" });
 
   const config = await loadConfig();
-  if (config.slot_enabled === "0") return cb({ error: "disabled" });
+  if (config.slot_enabled === "0") return emitNet("casino:slot:response", src, cbId, { error: "disabled" });
 
   // Validacao de input
   const bet = parseInt(payload.bet);
@@ -316,18 +381,19 @@ RegisterNuiCallback("casino:slot:spin", async (payload, cb) => {
   const minBet = parseInt(config.slot_min_bet || "1");
   const maxBet = parseInt(config.slot_max_bet || "500");
 
-  if (!bet || bet < minBet || bet > maxBet || isNaN(bet)) return cb({ error: "invalid_bet" });
+  if (!bet || bet < minBet || bet > maxBet || isNaN(bet)) return emitNet("casino:slot:response", src, cbId, { error: "invalid_bet" });
 
   // Rate limit
   const rlCheck = checkRateLimit(identifier, config);
-  if (!rlCheck.ok) return cb({ error: rlCheck.reason });
+  if (!rlCheck.ok) return emitNet("casino:slot:response", src, cbId, { error: rlCheck.reason });
 
   // Saldo
-  const conta = await exports.oxmysql.single_async("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
-  if (!conta) return cb({ error: "no_account" });
+  const contaRows = await dbQuery("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
+  const conta = contaRows?.[0];
+  if (!conta) return emitNet("casino:slot:response", src, cbId, { error: "no_account" });
   const saldoAntes = parseFloat(conta.gcoin_balance);
   const totalBet = anteBet ? Math.floor(bet * parseFloat(config.slot_ante_bet_mod || "1.25")) : bet;
-  if (saldoAntes < totalBet) return cb({ error: "insufficient_balance" });
+  if (saldoAntes < totalBet) return emitNet("casino:slot:response", src, cbId, { error: "insufficient_balance" });
 
   // Sessao + nonce
   const session = await getOrCreateSession(identifier, "video", clientSeed);
@@ -335,40 +401,47 @@ RegisterNuiCallback("casino:slot:spin", async (payload, cb) => {
   session.nonce++;
 
   // Jackpot
-  const jp = await exports.oxmysql.single_async("SELECT pool FROM casino_slot_jackpot WHERE id = 1");
+  const jpRows = await dbQuery("SELECT pool FROM casino_slot_jackpot WHERE id = 1");
+  const jp = jpRows?.[0];
   const jackpotPool = jp ? parseFloat(jp.pool) : 10000;
 
   // Resultado server-side
   const result = processVideoSpin(bet, anteBet, session.serverSeed, session.clientSeed, nonce, isFS, jackpotPool, config);
   const saldoDepois = saldoAntes - result.totalBet + result.totalWin;
 
-  // Transacao atomica: debitar + creditar + registrar spin + atualizar jackpot
-  await exports.oxmysql.transaction_async([
-    { query: "UPDATE casino_accounts SET gcoin_balance = ?, total_wagered = total_wagered + ?, total_won = total_won + ? WHERE identifier = ?",
-      values: [saldoDepois, result.totalBet, result.totalWin, identifier] },
-    { query: "INSERT INTO casino_slot_spins (session_id, identifier, mode, nonce, bet, ante_bet, total_bet, win, multiplier, tumbles, scatter_count, free_spins_triggered, is_jackpot, jackpot_win, saldo_antes, saldo_depois, grid_hash) VALUES (?, ?, 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      values: [session.sessionId, identifier, nonce, bet, anteBet ? 1 : 0, result.totalBet, result.totalWin, result.totalMultiplier, result.tumbles, result.scatterCount, result.triggeredFS ? 1 : 0, result.isJackpot ? 1 : 0, result.jackpotWin, saldoAntes, saldoDepois, result.gridHash] },
-    { query: "UPDATE casino_slot_jackpot SET pool = ?, total_contributed = total_contributed + ? WHERE id = 1",
-      values: [result.newJackpotPool, result.totalBet * (parseFloat(config.slot_jackpot_contrib || "1.5") / 100)] },
-    { query: "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'bet', ?, ?, ?, 'slot_video', ?)",
-      values: [identifier, result.totalBet, saldoAntes, saldoAntes - result.totalBet, `spin:${nonce} bet:${bet} ante:${anteBet}`] },
-  ]);
+  // Transacao: debitar + creditar + registrar spin + atualizar jackpot (sequencial — panel.js pattern)
+  await dbExecute(
+    "UPDATE casino_accounts SET gcoin_balance = ?, total_wagered = total_wagered + ?, total_won = total_won + ? WHERE identifier = ?",
+    [saldoDepois, result.totalBet, result.totalWin, identifier]
+  );
+  await dbExecute(
+    "INSERT INTO casino_slot_spins (session_id, identifier, mode, nonce, bet, ante_bet, total_bet, win, multiplier, tumbles, scatter_count, free_spins_triggered, is_jackpot, jackpot_win, saldo_antes, saldo_depois, grid_hash) VALUES (?, ?, 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [session.sessionId, identifier, nonce, bet, anteBet ? 1 : 0, result.totalBet, result.totalWin, result.totalMultiplier, result.tumbles, result.scatterCount, result.triggeredFS ? 1 : 0, result.isJackpot ? 1 : 0, result.jackpotWin, saldoAntes, saldoDepois, result.gridHash]
+  );
+  await dbExecute(
+    "UPDATE casino_slot_jackpot SET pool = ?, total_contributed = total_contributed + ? WHERE id = 1",
+    [result.newJackpotPool, result.totalBet * (parseFloat(config.slot_jackpot_contrib || "1.5") / 100)]
+  );
+  await dbExecute(
+    "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'bet', ?, ?, ?, 'slot_video', ?)",
+    [identifier, result.totalBet, saldoAntes, saldoAntes - result.totalBet, `spin:${nonce} bet:${bet} ante:${anteBet}`]
+  );
 
   // Se teve win, registrar transacao de win separada
   if (result.totalWin > 0) {
-    await exports.oxmysql.insert_async(
+    await dbExecute(
       "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'win', ?, ?, ?, 'slot_video', ?)",
       [identifier, result.totalWin, saldoAntes - result.totalBet, saldoDepois, `spin:${nonce} win:${result.totalWin} mult:${result.totalMultiplier}`]
     );
   }
 
   // Atualizar totais da sessao
-  await exports.oxmysql.update_async(
+  await dbExecute(
     "UPDATE casino_slot_sessions SET total_bet = total_bet + ?, total_won = total_won + ?, spins_count = spins_count + 1, nonce_end = ? WHERE id = ?",
     [result.totalBet, result.totalWin, nonce, session.sessionId]
   );
 
-  cb({
+  emitNet("casino:slot:response", src, cbId, {
     success: true,
     balance: saldoDepois,
     totalWin: result.totalWin,
@@ -382,31 +455,33 @@ RegisterNuiCallback("casino:slot:spin", async (payload, cb) => {
     jackpotPool: result.newJackpotPool,
     serverSeedHash: session.serverSeedHash,
     nonce,
+    grid: result.grid,
+    tumbleSteps: result.tumbleSteps,
   });
 });
 
 // SPIN CLASSIC
-RegisterNuiCallback("casino:slot:classic-spin", async (payload, cb) => {
-  const source = global.source;
-  const identifier = GetPlayerIdentifier(source, 0);
-  if (!identifier) return cb({ error: "no_identifier" });
+safeSlotHandler("casino:slot:classic-spin", async (src, cbId, payload) => {
+  const identifier = GetPlayerIdentifier(src, 0);
+  if (!identifier) return emitNet("casino:slot:response", src, cbId, { error: "no_identifier" });
 
   const config = await loadConfig();
-  if (config.slot_enabled === "0") return cb({ error: "disabled" });
+  if (config.slot_enabled === "0") return emitNet("casino:slot:response", src, cbId, { error: "disabled" });
 
   const bet = parseInt(payload.bet);
   const clientSeed = String(payload.clientSeed || "").slice(0, 32);
   const minBet = parseInt(config.slot_min_bet || "1");
   const maxBet = parseInt(config.slot_max_bet || "500");
-  if (!bet || bet < minBet || bet > maxBet) return cb({ error: "invalid_bet" });
+  if (!bet || bet < minBet || bet > maxBet) return emitNet("casino:slot:response", src, cbId, { error: "invalid_bet" });
 
   const rlCheck = checkRateLimit(identifier, config);
-  if (!rlCheck.ok) return cb({ error: rlCheck.reason });
+  if (!rlCheck.ok) return emitNet("casino:slot:response", src, cbId, { error: rlCheck.reason });
 
-  const conta = await exports.oxmysql.single_async("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
-  if (!conta) return cb({ error: "no_account" });
+  const contaRows = await dbQuery("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
+  const conta = contaRows?.[0];
+  if (!conta) return emitNet("casino:slot:response", src, cbId, { error: "no_account" });
   const saldoAntes = parseFloat(conta.gcoin_balance);
-  if (saldoAntes < bet) return cb({ error: "insufficient_balance" });
+  if (saldoAntes < bet) return emitNet("casino:slot:response", src, cbId, { error: "insufficient_balance" });
 
   const session = await getOrCreateSession(identifier, "classic", clientSeed);
   const nonce = session.nonce;
@@ -415,81 +490,87 @@ RegisterNuiCallback("casino:slot:classic-spin", async (payload, cb) => {
   const result = processClassicSpin(bet, session.serverSeed, session.clientSeed, nonce);
   const saldoDepois = saldoAntes - bet + result.totalWin;
 
-  await exports.oxmysql.transaction_async([
-    { query: "UPDATE casino_accounts SET gcoin_balance = ?, total_wagered = total_wagered + ?, total_won = total_won + ? WHERE identifier = ?",
-      values: [saldoDepois, bet, result.totalWin, identifier] },
-    { query: "INSERT INTO casino_slot_spins (session_id, identifier, mode, nonce, bet, ante_bet, total_bet, win, saldo_antes, saldo_depois, grid_hash) VALUES (?, ?, 'classic', ?, ?, 0, ?, ?, ?, ?, ?)",
-      values: [session.sessionId, identifier, nonce, bet, bet, result.totalWin, saldoAntes, saldoDepois, result.gridHash] },
-    { query: "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'bet', ?, ?, ?, 'slot_classic', ?)",
-      values: [identifier, bet, saldoAntes, saldoAntes - bet, `classic:${nonce}`] },
-  ]);
+  await dbExecute(
+    "UPDATE casino_accounts SET gcoin_balance = ?, total_wagered = total_wagered + ?, total_won = total_won + ? WHERE identifier = ?",
+    [saldoDepois, bet, result.totalWin, identifier]
+  );
+  await dbExecute(
+    "INSERT INTO casino_slot_spins (session_id, identifier, mode, nonce, bet, ante_bet, total_bet, win, saldo_antes, saldo_depois, grid_hash) VALUES (?, ?, 'classic', ?, ?, 0, ?, ?, ?, ?, ?)",
+    [session.sessionId, identifier, nonce, bet, bet, result.totalWin, saldoAntes, saldoDepois, result.gridHash]
+  );
+  await dbExecute(
+    "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'bet', ?, ?, ?, 'slot_classic', ?)",
+    [identifier, bet, saldoAntes, saldoAntes - bet, `classic:${nonce}`]
+  );
 
   if (result.totalWin > 0) {
-    await exports.oxmysql.insert_async(
+    await dbExecute(
       "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'win', ?, ?, ?, 'slot_classic', ?)",
       [identifier, result.totalWin, saldoAntes - bet, saldoDepois, `classic:${nonce} win:${result.totalWin}`]
     );
   }
 
-  cb({ success: true, balance: saldoDepois, totalWin: result.totalWin, serverSeedHash: session.serverSeedHash, nonce });
+  emitNet("casino:slot:response", src, cbId, { success: true, balance: saldoDepois, totalWin: result.totalWin, reels: result.visibleReels, serverSeedHash: session.serverSeedHash, nonce });
 });
 
 // BUY BONUS
-RegisterNuiCallback("casino:slot:buy-bonus", async (payload, cb) => {
-  const source = global.source;
-  const identifier = GetPlayerIdentifier(source, 0);
-  if (!identifier) return cb({ error: "no_identifier" });
+safeSlotHandler("casino:slot:buy-bonus", async (src, cbId, payload) => {
+  const identifier = GetPlayerIdentifier(src, 0);
+  if (!identifier) return emitNet("casino:slot:response", src, cbId, { error: "no_identifier" });
 
   const config = await loadConfig();
   const bet = parseInt(payload.bet);
   const cost = bet * parseInt(config.slot_buy_bonus_mult || "100");
 
-  const conta = await exports.oxmysql.single_async("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
-  if (!conta || parseFloat(conta.gcoin_balance) < cost) return cb({ error: "insufficient_balance" });
+  const contaRows = await dbQuery("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
+  const conta = contaRows?.[0];
+  if (!conta || parseFloat(conta.gcoin_balance) < cost) return emitNet("casino:slot:response", src, cbId, { error: "insufficient_balance" });
 
   const saldoAntes = parseFloat(conta.gcoin_balance);
   const saldoDepois = saldoAntes - cost;
 
-  await exports.oxmysql.transaction_async([
-    { query: "UPDATE casino_accounts SET gcoin_balance = ?, total_wagered = total_wagered + ? WHERE identifier = ?",
-      values: [saldoDepois, cost, identifier] },
-    { query: "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'bet', ?, ?, ?, 'slot_buy_bonus', ?)",
-      values: [identifier, cost, saldoAntes, saldoDepois, `buy_bonus bet:${bet} cost:${cost}`] },
-  ]);
+  await dbExecute(
+    "UPDATE casino_accounts SET gcoin_balance = ?, total_wagered = total_wagered + ? WHERE identifier = ?",
+    [saldoDepois, cost, identifier]
+  );
+  await dbExecute(
+    "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'bet', ?, ?, ?, 'slot_buy_bonus', ?)",
+    [identifier, cost, saldoAntes, saldoDepois, `buy_bonus bet:${bet} cost:${cost}`]
+  );
 
-  cb({ success: true, balance: saldoDepois, cost, fsAwarded: parseInt(config.slot_fs_count || "10") });
+  emitNet("casino:slot:response", src, cbId, { success: true, balance: saldoDepois, cost, fsAwarded: parseInt(config.slot_fs_count || "10") });
 });
 
 // GET SALDO
-RegisterNuiCallback("casino:slot:get-balance", async (_, cb) => {
-  const source = global.source;
-  const identifier = GetPlayerIdentifier(source, 0);
-  if (!identifier) return cb({ error: "no_identifier" });
+safeSlotHandler("casino:slot:get-balance", async (src, cbId) => {
+  const identifier = GetPlayerIdentifier(src, 0);
+  if (!identifier) return emitNet("casino:slot:response", src, cbId, { error: "no_identifier" });
 
-  const conta = await exports.oxmysql.single_async("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
-  if (!conta) return cb({ error: "no_account" });
+  const contaRows = await dbQuery("SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?", [identifier]);
+  const conta = contaRows?.[0];
+  if (!conta) return emitNet("casino:slot:response", src, cbId, { error: "no_account" });
 
-  const jp = await exports.oxmysql.single_async("SELECT pool FROM casino_slot_jackpot WHERE id = 1");
-  cb({ balance: parseFloat(conta.gcoin_balance), jackpotPool: jp ? parseFloat(jp.pool) : 10000 });
+  const jpRows = await dbQuery("SELECT pool FROM casino_slot_jackpot WHERE id = 1");
+  const jp = jpRows?.[0];
+  emitNet("casino:slot:response", src, cbId, { balance: parseFloat(conta.gcoin_balance), jackpotPool: jp ? parseFloat(jp.pool) : 10000 });
 });
 
 // GET HISTORICO (ultimos 20 spins)
-RegisterNuiCallback("casino:slot:get-history", async (_, cb) => {
-  const source = global.source;
-  const identifier = GetPlayerIdentifier(source, 0);
-  if (!identifier) return cb({ error: "no_identifier" });
+safeSlotHandler("casino:slot:get-history", async (src, cbId) => {
+  const identifier = GetPlayerIdentifier(src, 0);
+  if (!identifier) return emitNet("casino:slot:response", src, cbId, { error: "no_identifier" });
 
-  const spins = await exports.oxmysql.query_async(
+  const spins = await dbQuery(
     "SELECT id, mode, nonce, bet, total_bet, win, multiplier, tumbles, scatter_count, free_spins_triggered, is_buy_bonus, is_jackpot, created_at FROM casino_slot_spins WHERE identifier = ? ORDER BY created_at DESC LIMIT 20",
     [identifier]
   );
-  cb({ history: spins || [] });
+  emitNet("casino:slot:response", src, cbId, { history: spins || [] });
 });
 
 // GET CONFIG (para NUI)
-RegisterNuiCallback("casino:slot:get-config", async (_, cb) => {
+safeSlotHandler("casino:slot:get-config", async (src, cbId) => {
   const config = await loadConfig();
-  cb({
+  emitNet("casino:slot:response", src, cbId, {
     minBet: parseInt(config.slot_min_bet || "1"),
     maxBet: parseInt(config.slot_max_bet || "500"),
     buyBonusMult: parseInt(config.slot_buy_bonus_mult || "100"),
@@ -502,19 +583,18 @@ RegisterNuiCallback("casino:slot:get-config", async (_, cb) => {
 });
 
 // REVELAR SERVER SEED (quando jogador troca de sessao)
-RegisterNuiCallback("casino:slot:reveal-seed", async (_, cb) => {
-  const source = global.source;
-  const identifier = GetPlayerIdentifier(source, 0);
-  if (!identifier) return cb({ error: "no_identifier" });
+safeSlotHandler("casino:slot:reveal-seed", async (src, cbId) => {
+  const identifier = GetPlayerIdentifier(src, 0);
+  if (!identifier) return emitNet("casino:slot:response", src, cbId, { error: "no_identifier" });
 
   const session = sessions[identifier];
-  if (!session) return cb({ error: "no_session" });
+  if (!session) return emitNet("casino:slot:response", src, cbId, { error: "no_session" });
 
   const oldSeed = session.serverSeed;
   const oldHash = session.serverSeedHash;
 
   // Fechar sessao antiga
-  await exports.oxmysql.update_async(
+  await dbExecute(
     "UPDATE casino_slot_sessions SET server_seed = ?, closed_at = NOW(), nonce_end = ? WHERE id = ?",
     [oldSeed, session.nonce, session.sessionId]
   );
@@ -522,5 +602,5 @@ RegisterNuiCallback("casino:slot:reveal-seed", async (_, cb) => {
   // Criar nova sessao
   delete sessions[identifier];
 
-  cb({ serverSeed: oldSeed, serverSeedHash: oldHash, nonce: session.nonce });
+  emitNet("casino:slot:response", src, cbId, { serverSeed: oldSeed, serverSeedHash: oldHash, nonce: session.nonce });
 });

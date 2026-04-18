@@ -1,12 +1,12 @@
 "use client";
 
 // Deteccao de ambiente: FiveM NUI vs browser local
-const isFiveM = typeof window !== "undefined"
-  && typeof (window as any).GetParentResourceName === "function";
+// URL no FiveM comeca com https://cfx-nui-RESOURCE/ — deteccao 100% confiavel
+// GetParentResourceName pode nao existir ainda quando o JS executa (race condition)
+const isFiveM = typeof window !== "undefined" &&
+  window.location.href.includes("cfx-nui-");
 
-const resourceName = isFiveM
-  ? (window as any).GetParentResourceName()
-  : "blackout-casino";
+const resourceName = "bc_casino";
 
 // Wrapper generico pro fetch NUI do FiveM
 async function fetchNui<T>(evento: string, payload?: unknown): Promise<T> {

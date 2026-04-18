@@ -22,7 +22,7 @@ import {
 // =============================================
 
 // Browser: usa crypto.subtle. Server: usa Node crypto
-async function hmacSHA256(key: string, message: string): Promise<string> {
+export async function hmacSHA256(key: string, message: string): Promise<string> {
   if (typeof window !== "undefined" && window.crypto?.subtle) {
     const enc = new TextEncoder();
     const cryptoKey = await window.crypto.subtle.importKey(
@@ -35,7 +35,7 @@ async function hmacSHA256(key: string, message: string): Promise<string> {
   return fallbackHash(key + message);
 }
 
-async function sha256(input: string): Promise<string> {
+export async function sha256(input: string): Promise<string> {
   if (typeof window !== "undefined" && window.crypto?.subtle) {
     const enc = new TextEncoder();
     const hash = await window.crypto.subtle.digest("SHA-256", enc.encode(input));

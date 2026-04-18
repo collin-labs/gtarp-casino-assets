@@ -35,6 +35,8 @@ export interface HistoryModalProps<T = any> {
   escPop?: (id: string) => void;
   // Row customizado completo (substitui a tabela — pra jogos como bicho que tem layout especial)
   renderCustomRow?: (row: T, index: number) => ReactNode;
+  // Conteudo customizado acima da tabela (filtros, tabs — opcional)
+  headerContent?: ReactNode;
 }
 
 const GOLD = "#D4A843";
@@ -53,6 +55,7 @@ export default function HistoryModal<T extends { id?: number | string }>({
   escPush,
   escPop,
   renderCustomRow,
+  headerContent,
 }: HistoryModalProps<T>) {
   const empty = emptyMessage || (
     lang === "br"
@@ -71,6 +74,7 @@ export default function HistoryModal<T extends { id?: number | string }>({
       escPop={escPop}
       width="clamp(370px, 60vw, 720px)"
     >
+      {headerContent && <div style={{ marginBottom: "10px" }}>{headerContent}</div>}
       {data.length === 0 ? (
         <div
           style={{

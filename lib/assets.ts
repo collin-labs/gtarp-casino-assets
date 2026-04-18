@@ -14,10 +14,10 @@ export const UI = {
   btnDisabled: `${BASE}/shared/ui/btn-jogar-desativo.png`,
   flagBR: `${BASE}/shared/ui/pais-brasil.png`,
   flagEN: `${BASE}/shared/ui/pais-eua.png`,
-  logo4x2: encodeURI(`${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP CASINO LOGO 4-2.png`),
-  logo1x1: encodeURI(`${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP CASINO logo 1-1.png`),
-  logoIcone: encodeURI(`${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP CASINO LOGO 4-2-ICONE.png`),
-  logoTexto: encodeURI(`${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP CASINO LOGO 4-2-TEXTO.png`),
+  logo4x2: `${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP-CASINO-LOGO-4-2.png`,
+  logo1x1: `${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP-CASINO-logo-1-1.png`,
+  logoIcone: `${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP-CASINO-LOGO-4-2-ICONE.png`,
+  logoTexto: `${BASE}/brand/LOGO-BLACKOUT-CASINO/1-GTARP-CASINO-LOGO-4-2-TEXTO.png`,
 };
 
 // Icons do painel (shared/ui/)
@@ -118,16 +118,16 @@ export function logoINPath(id: number, name: string): string {
   return `${BASE}/logos-in-para-cards/${id}.LOGO-IN-${name}.png`;
 }
 
-// Imagem dourada (image-background-transparent/GTARP CASINO IMAGEM DOURADA/)
+// Imagem dourada
 export function goldPath(id: number, name: string): string {
-  return encodeURI(`${BASE}/image-background-transparent/GTARP CASINO IMAGEM DOURADA/${id}.IMAGEM-DOURADA-${name}.png`);
+  return `${BASE}/image-background-transparent/GTARP-CASINO-IMAGEM-DOURADA/${id}.IMAGEM-DOURADA-${name}.png`;
 }
 
-// Imagem com pedestal (image-para-hero/GTARP CASINO IMAGEM COM PEDESTAL/)
+// Imagem com pedestal
 const PEDESTAL_NO_IMAGE: Set<number> = new Set([16, 17, 18]);
 export function pedestalPath(id: number, name: string): string {
   const suffix = PEDESTAL_NO_IMAGE.has(id) ? "-NO-IMAGE" : "";
-  return encodeURI(`${BASE}/image-para-hero/GTARP CASINO IMAGEM COM PEDESTAL/${id}.${name}-IMAGEM-COM-PEDESTAL${suffix}.png`);
+  return `${BASE}/image-para-hero/GTARP-CASINO-IMAGEM-COM-PEDESTAL/${id}.${name}-IMAGEM-COM-PEDESTAL${suffix}.png`;
 }
 
 // Video hover por jogo (videos/hover/)

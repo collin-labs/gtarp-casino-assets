@@ -4,7 +4,9 @@ import BlackoutCasino from "@/components/casino/BlackoutCasino";
 export default function Page() {
   return (
     <CasinoProvider>
-      <BlackoutCasino />
+      <div data-casino-ready="">
+        <BlackoutCasino />
+      </div>
     </CasinoProvider>
   );
 }

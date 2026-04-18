@@ -1,19 +1,22 @@
-// Blackout Casino — Handler do Painel Flutuante (server-side JS)
-// Compativel com oxmysql 2.x (prepared statements)
-// Todos endpoints sao chamados via NUI → client.lua → TriggerServerEvent
+// Blackout Casino — Panel Handler (server-side JS)
+// TODOS os handlers envolvidos em try/catch — erro nunca morre mudo
 
-const db = exports.oxmysql;
+const RESPONSE_EVENT = "casino:panel:response";
 
-// Cache de cooldown por jogador (rate-limit — fonte #6 vertexmods)
-const cooldownMap = new Map();
-const COOLDOWN_MS = 3000;
-
-function checkCooldown(identifier) {
-  const agora = Date.now();
-  const ultimo = cooldownMap.get(identifier) || 0;
-  if (agora - ultimo < COOLDOWN_MS) return false;
-  cooldownMap.set(identifier, agora);
-  return true;
+// Helper DB: callback explicito wrappado em Promise (unico padrao que funciona no FiveM JS)
+function dbQuery(sql, params) {
+  return new Promise((resolve) => {
+    exports.oxmysql.query(sql, params || [], (result) => {
+      resolve(result);
+    });
+  });
+}
+function dbExecute(sql, params) {
+  return new Promise((resolve) => {
+    exports.oxmysql.execute(sql, params || [], (result) => {
+      resolve(result);
+    });
+  });
 }
 
 function getIdentifier(src) {
@@ -25,217 +28,239 @@ function getIdentifier(src) {
   return null;
 }
 
-// Garantir que conta existe (upsert)
-async function garantirConta(identifier) {
-  await db.execute(
-    `INSERT IGNORE INTO casino_accounts (identifier, gcoin_balance)
-     VALUES (?, 0.00)`,
-    [identifier]
-  );
+function respond(src, cbId, data) {
+  emitNet(RESPONSE_EVENT, src, cbId, data);
 }
 
-// Buscar config do banco (cacheavel no futuro)
-async function getConfig(chave) {
-  const rows = await db.query(
-    "SELECT valor FROM casino_config WHERE chave = ?",
-    [chave]
-  );
-  return rows?.[0]?.valor ?? null;
-}
-
-// Registrar transacao no audit log (regra X12)
-async function registrarTransacao(identifier, tipo, valor, saldoAntes, saldoDepois, jogo, detalhes) {
-  await db.execute(
-    `INSERT INTO casino_transactions
-     (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [identifier, tipo, valor, saldoAntes, saldoDepois, jogo, detalhes]
-  );
-}
-
-// ============================================================
-// ENDPOINT 1: getSaldo — retorna saldo GCoin do jogador
-// ============================================================
+// getSaldo
 RegisterNetEvent("casino:panel:getSaldo");
-on("casino:panel:getSaldo", async () => {
+on("casino:panel:getSaldo", async (cbId) => {
   const src = source;
-  const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:panel:getSaldo:response", src, { erro: "Identificador nao encontrado" });
+  console.log(`[CASINO-PANEL] getSaldo src=${src} cbId=${cbId}`);
+  try {
+    const identifier = getIdentifier(src);
+    if (!identifier) return respond(src, cbId, { erro: "Sem identifier" });
 
-  await garantirConta(identifier);
+    await dbExecute(
+      "INSERT IGNORE INTO casino_accounts (identifier, gcoin_balance) VALUES (?, 0.00)",
+      [identifier]
+    );
 
-  const rows = await db.query(
-    "SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?",
-    [identifier]
-  );
+    const rows = await dbQuery(
+      "SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?",
+      [identifier]
+    );
 
-  const saldo = rows?.[0]?.gcoin_balance ?? 0;
-  emitNet("casino:panel:getSaldo:response", src, { gcoin_balance: parseFloat(saldo) });
+    const saldo = rows?.[0]?.gcoin_balance ?? 0;
+    console.log(`[CASINO-PANEL] getSaldo OK saldo=${saldo}`);
+    respond(src, cbId, { gcoin_balance: parseFloat(saldo) });
+  } catch (err) {
+    console.log(`[CASINO-PANEL] getSaldo ERRO: ${err.message}`);
+    respond(src, cbId, { erro: err.message });
+  }
 });
 
-// ============================================================
-// ENDPOINT 2: buyGCoin — comprar GCoin com dinheiro do servidor
-// ============================================================
+// buyGCoin
 RegisterNetEvent("casino:panel:buyGCoin");
-on("casino:panel:buyGCoin", async (amount) => {
+on("casino:panel:buyGCoin", async (cbId, payload) => {
   const src = source;
-  const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:panel:buyGCoin:response", src, { sucesso: false, mensagem: "Sem identificador" });
+  console.log(`[CASINO-PANEL] buyGCoin src=${src} cbId=${cbId} payload=${JSON.stringify(payload)}`);
+  try {
+    const identifier = getIdentifier(src);
+    if (!identifier) return respond(src, cbId, { sucesso: false, mensagem: "Sem identifier" });
 
-  // Rate-limit
-  if (!checkCooldown(identifier)) {
-    return emitNet("casino:panel:buyGCoin:response", src, { sucesso: false, mensagem: "Aguarde antes de tentar novamente" });
+    const valor = parseFloat(payload?.amount || payload);
+    if (isNaN(valor) || valor <= 0) return respond(src, cbId, { sucesso: false, mensagem: "Valor invalido" });
+
+    await dbExecute(
+      "INSERT IGNORE INTO casino_accounts (identifier, gcoin_balance) VALUES (?, 0.00)",
+      [identifier]
+    );
+
+    const rows = await dbQuery(
+      "SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?",
+      [identifier]
+    );
+    const saldoAntes = parseFloat(rows?.[0]?.gcoin_balance ?? 0);
+
+    const debitou = exports.bc_casino.debitarDinheiro(src, valor);
+    if (!debitou) return respond(src, cbId, { sucesso: false, mensagem: "Dinheiro insuficiente" });
+
+    const saldoDepois = saldoAntes + valor;
+    await dbExecute(
+      "UPDATE casino_accounts SET gcoin_balance = ?, total_deposited = total_deposited + ? WHERE identifier = ?",
+      [saldoDepois, valor, identifier]
+    );
+
+    await dbExecute(
+      "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'deposit', ?, ?, ?, NULL, ?)",
+      [identifier, valor, saldoAntes, saldoDepois, `Deposito ${valor} GC via carteira`]
+    );
+
+    console.log(`[CASINO-PANEL] buyGCoin OK ${saldoAntes} -> ${saldoDepois}`);
+    respond(src, cbId, { sucesso: true, novoSaldo: saldoDepois });
+    emitNet("casino:saldoAtualizado", src, { gcoin: saldoDepois });
+  } catch (err) {
+    console.log(`[CASINO-PANEL] buyGCoin ERRO: ${err.message}`);
+    respond(src, cbId, { sucesso: false, mensagem: err.message });
   }
-
-  // Validacao de input
-  const valor = parseFloat(amount);
-  if (isNaN(valor) || valor <= 0) {
-    return emitNet("casino:panel:buyGCoin:response", src, { sucesso: false, mensagem: "Valor invalido" });
-  }
-
-  const minDeposit = parseFloat(await getConfig("min_deposit")) || 10;
-  const maxDeposit = parseFloat(await getConfig("max_deposit")) || 50000;
-  if (valor < minDeposit || valor > maxDeposit) {
-    return emitNet("casino:panel:buyGCoin:response", src, {
-      sucesso: false,
-      mensagem: `Deposito deve ser entre ${minDeposit} e ${maxDeposit} GCoin`
-    });
-  }
-
-  await garantirConta(identifier);
-
-  // Buscar saldo atual
-  const rows = await db.query(
-    "SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?",
-    [identifier]
-  );
-  const saldoAntes = parseFloat(rows?.[0]?.gcoin_balance ?? 0);
-
-  // TODO: integrar com framework (ESX/vRP) pra debitar dinheiro real do jogador
-  // Exemplo ESX: xPlayer.removeMoney(valor * taxaGCoin)
-  // Por enquanto, credita direto (mock pra dev)
-
-  const saldoDepois = saldoAntes + valor;
-
-  await db.execute(
-    `UPDATE casino_accounts
-     SET gcoin_balance = ?, total_deposited = total_deposited + ?
-     WHERE identifier = ?`,
-    [saldoDepois, valor, identifier]
-  );
-
-  await registrarTransacao(identifier, "deposit", valor, saldoAntes, saldoDepois, null, "Compra de GCoin via painel");
-
-  emitNet("casino:panel:buyGCoin:response", src, { sucesso: true, novoSaldo: saldoDepois });
 });
 
-// ============================================================
-// ENDPOINT 3: cashoutGCoin — sacar GCoin pra dinheiro do servidor
-// ============================================================
+// cashoutGCoin
 RegisterNetEvent("casino:panel:cashoutGCoin");
-on("casino:panel:cashoutGCoin", async (amount) => {
+on("casino:panel:cashoutGCoin", async (cbId, payload) => {
   const src = source;
-  const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:panel:cashoutGCoin:response", src, { sucesso: false, mensagem: "Sem identificador" });
+  console.log(`[CASINO-PANEL] cashoutGCoin src=${src} cbId=${cbId}`);
+  try {
+    const identifier = getIdentifier(src);
+    if (!identifier) return respond(src, cbId, { sucesso: false, mensagem: "Sem identifier" });
 
-  if (!checkCooldown(identifier)) {
-    return emitNet("casino:panel:cashoutGCoin:response", src, { sucesso: false, mensagem: "Aguarde antes de tentar novamente" });
+    const valor = parseFloat(payload?.amount || payload);
+    if (isNaN(valor) || valor <= 0) return respond(src, cbId, { sucesso: false, mensagem: "Valor invalido" });
+
+    await dbExecute(
+      "INSERT IGNORE INTO casino_accounts (identifier, gcoin_balance) VALUES (?, 0.00)",
+      [identifier]
+    );
+
+    const rows = await dbQuery(
+      "SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?",
+      [identifier]
+    );
+    const saldoAntes = parseFloat(rows?.[0]?.gcoin_balance ?? 0);
+    if (saldoAntes < valor) return respond(src, cbId, { sucesso: false, mensagem: "Saldo insuficiente" });
+
+    const saldoDepois = saldoAntes - valor;
+    await dbExecute(
+      "UPDATE casino_accounts SET gcoin_balance = ?, total_withdrawn = total_withdrawn + ? WHERE identifier = ?",
+      [saldoDepois, valor, identifier]
+    );
+
+    const creditou = exports.bc_casino.creditarDinheiro(src, valor);
+
+    await dbExecute(
+      "INSERT INTO casino_transactions (identifier, tipo, valor, saldo_antes, saldo_depois, jogo, detalhes) VALUES (?, 'withdraw', ?, ?, ?, NULL, ?)",
+      [identifier, valor, saldoAntes, saldoDepois, `Saque ${valor} GC para carteira`]
+    );
+
+    console.log(`[CASINO-PANEL] cashoutGCoin OK ${saldoAntes} -> ${saldoDepois}`);
+    respond(src, cbId, { sucesso: true, novoSaldo: saldoDepois });
+    emitNet("casino:saldoAtualizado", src, { gcoin: saldoDepois });
+  } catch (err) {
+    console.log(`[CASINO-PANEL] cashoutGCoin ERRO: ${err.message}`);
+    respond(src, cbId, { sucesso: false, mensagem: err.message });
   }
-
-  const valor = parseFloat(amount);
-  if (isNaN(valor) || valor <= 0) {
-    return emitNet("casino:panel:cashoutGCoin:response", src, { sucesso: false, mensagem: "Valor invalido" });
-  }
-
-  const minWithdraw = parseFloat(await getConfig("min_withdraw")) || 50;
-  const maxWithdraw = parseFloat(await getConfig("max_withdraw")) || 100000;
-  if (valor < minWithdraw || valor > maxWithdraw) {
-    return emitNet("casino:panel:cashoutGCoin:response", src, {
-      sucesso: false,
-      mensagem: `Saque deve ser entre ${minWithdraw} e ${maxWithdraw} GCoin`
-    });
-  }
-
-  await garantirConta(identifier);
-
-  const rows = await db.query(
-    "SELECT gcoin_balance FROM casino_accounts WHERE identifier = ?",
-    [identifier]
-  );
-  const saldoAntes = parseFloat(rows?.[0]?.gcoin_balance ?? 0);
-
-  if (saldoAntes < valor) {
-    return emitNet("casino:panel:cashoutGCoin:response", src, { sucesso: false, mensagem: "Saldo insuficiente" });
-  }
-
-  // Taxa de saque (money sink — fonte #5 vertexmods)
-  const taxaPercent = parseFloat(await getConfig("withdraw_tax_percent")) || 2;
-  const taxa = valor * (taxaPercent / 100);
-  const valorLiquido = valor - taxa;
-  const saldoDepois = saldoAntes - valor;
-
-  await db.execute(
-    `UPDATE casino_accounts
-     SET gcoin_balance = ?, total_withdrawn = total_withdrawn + ?
-     WHERE identifier = ?`,
-    [saldoDepois, valor, identifier]
-  );
-
-  // TODO: integrar com framework (ESX/vRP) pra creditar dinheiro real ao jogador
-  // Exemplo ESX: xPlayer.addMoney(valorLiquido * taxaGCoin)
-
-  await registrarTransacao(identifier, "withdraw", valor, saldoAntes, saldoDepois, null,
-    `Saque de ${valor} GCoin (taxa ${taxaPercent}%, liquido ${valorLiquido.toFixed(2)})`
-  );
-
-  emitNet("casino:panel:cashoutGCoin:response", src, {
-    sucesso: true,
-    novoSaldo: saldoDepois,
-    valorLiquido,
-    taxa,
-  });
 });
 
-// ============================================================
-// ENDPOINT 4: getHistory — historico de transacoes do jogador
-// ============================================================
+// getHistory
 RegisterNetEvent("casino:panel:getHistory");
-on("casino:panel:getHistory", async (limite) => {
+on("casino:panel:getHistory", async (cbId, payload) => {
   const src = source;
-  const identifier = getIdentifier(src);
-  if (!identifier) return emitNet("casino:panel:getHistory:response", src, []);
+  console.log(`[CASINO-PANEL] getHistory src=${src} cbId=${cbId}`);
+  try {
+    const identifier = getIdentifier(src);
+    if (!identifier) return respond(src, cbId, []);
 
-  const maxRows = Math.min(parseInt(limite) || 50, 200);
+    const limite = parseInt(payload?.limite || payload) || 50;
+    const maxRows = Math.min(limite, 200);
 
-  const rows = await db.query(
-    `SELECT tipo, valor, saldo_depois, jogo, detalhes, created_at
-     FROM casino_transactions
-     WHERE identifier = ?
-     ORDER BY created_at DESC
-     LIMIT ?`,
-    [identifier, maxRows]
-  );
+    const rows = await dbQuery(
+      "SELECT tipo, valor, saldo_depois, jogo, detalhes, created_at FROM casino_transactions WHERE identifier = ? ORDER BY created_at DESC LIMIT ?",
+      [identifier, maxRows]
+    );
 
-  emitNet("casino:panel:getHistory:response", src, rows || []);
-});
-
-// ============================================================
-// ENDPOINT 5: getConfig — retorna configs publicas do cassino
-// ============================================================
-RegisterNetEvent("casino:panel:getConfig");
-on("casino:panel:getConfig", async () => {
-  const src = source;
-
-  const rows = await db.query(
-    "SELECT chave, valor FROM casino_config"
-  );
-
-  const config = {};
-  for (const row of (rows || [])) {
-    config[row.chave] = row.valor;
+    console.log(`[CASINO-PANEL] getHistory OK rows=${(rows||[]).length}`);
+    respond(src, cbId, rows || []);
+  } catch (err) {
+    console.log(`[CASINO-PANEL] getHistory ERRO: ${err.message}`);
+    respond(src, cbId, []);
   }
-
-  emitNet("casino:panel:getConfig:response", src, config);
 });
 
-console.log("[Blackout Casino] Panel handlers carregados — 5 endpoints ativos");
+// getConfig
+RegisterNetEvent("casino:panel:getConfig");
+on("casino:panel:getConfig", async (cbId) => {
+  const src = source;
+  console.log(`[CASINO-PANEL] getConfig src=${src} cbId=${cbId}`);
+  try {
+    const rows = await dbQuery("SELECT chave, valor FROM casino_config");
+    const config = {};
+    for (const row of (rows || [])) config[row.chave] = row.valor;
+    console.log(`[CASINO-PANEL] getConfig OK`);
+    respond(src, cbId, config);
+  } catch (err) {
+    console.log(`[CASINO-PANEL] getConfig ERRO: ${err.message}`);
+    respond(src, cbId, {});
+  }
+});
+
+// getWalletBalance — saldo carteira + banco do vRP
+RegisterNetEvent("casino:panel:getWalletBalance");
+on("casino:panel:getWalletBalance", async (cbId) => {
+  const src = source;
+  console.log(`[CASINO-PANEL] getWalletBalance src=${src} cbId=${cbId}`);
+  try {
+    const carteira = exports.bc_casino.consultarSaldo(src);
+    const banco = exports.bc_casino.consultarBanco(src);
+    console.log(`[CASINO-PANEL] getWalletBalance OK carteira=${carteira} banco=${banco}`);
+    respond(src, cbId, {
+      carteira: parseFloat(carteira) || 0,
+      banco: parseFloat(banco) || 0,
+    });
+  } catch (err) {
+    console.log(`[CASINO-PANEL] getWalletBalance ERRO: ${err.message}`);
+    respond(src, cbId, { carteira: 0, banco: 0 });
+  }
+});
+
+// getHistoryFiltered — historico com filtros (tipo, data, paginacao)
+RegisterNetEvent("casino:panel:getHistoryFiltered");
+on("casino:panel:getHistoryFiltered", async (cbId, payload) => {
+  const src = source;
+  try {
+    const identifier = getIdentifier(src);
+    if (!identifier) return respond(src, cbId, { rows: [], total: 0 });
+
+    const tipo = payload?.tipo || null;
+    const dataInicio = payload?.dataInicio || null;
+    const dataFim = payload?.dataFim || null;
+    const page = Math.max(1, parseInt(payload?.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(payload?.limit) || 15));
+    const offset = (page - 1) * limit;
+
+    let where = "identifier = ?";
+    const params = [identifier];
+
+    if (tipo) {
+      where += " AND tipo = ?";
+      params.push(tipo);
+    }
+    if (dataInicio) {
+      where += " AND created_at >= ?";
+      params.push(dataInicio + " 00:00:00");
+    }
+    if (dataFim) {
+      where += " AND created_at <= ?";
+      params.push(dataFim + " 23:59:59");
+    }
+
+    const countRows = await dbQuery(
+      `SELECT COUNT(*) as total FROM casino_transactions WHERE ${where}`,
+      params
+    );
+    const total = countRows?.[0]?.total ?? 0;
+
+    const paramsWithLimit = [...params, limit, offset];
+    const rows = await dbQuery(
+      `SELECT tipo, valor, saldo_antes, saldo_depois, jogo, detalhes, created_at FROM casino_transactions WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      paramsWithLimit
+    );
+
+    respond(src, cbId, { rows: rows || [], total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.log(`[CASINO-PANEL] getHistoryFiltered ERRO: ${err.message}`);
+    respond(src, cbId, { rows: [], total: 0 });
+  }
+});
+
+console.log("[Blackout Casino] Panel handlers carregados — 7 endpoints (try/catch em todos)");

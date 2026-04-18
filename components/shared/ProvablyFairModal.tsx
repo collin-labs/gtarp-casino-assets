@@ -46,6 +46,12 @@ export interface ProvablyFairModalProps {
   escPop?: (id: string) => void;
   // Explicacao custom por jogo (opcional)
   customExplanation?: ReactNode;
+  // F1: feedback visual ao trocar client seed
+  clientSeedChanged?: boolean;
+  // F2: badge de spins nao verificados
+  unverifiedCount?: number;
+  // F3: detalhes da verificacao (hash side-by-side)
+  verifyDetails?: { committedHash: string; recalculatedHash: string; match: boolean } | null;
 }
 
 const GOLD = "#D4A843";
@@ -70,17 +76,57 @@ const TEXTS = {
   copied: { br: "Copiado!", in: "Copied!" },
   howSteps: {
     br: [
-      "1. Antes de jogar, o servidor gera uma Server Seed secreta e envia apenas o HASH (SHA-256).",
-      "2. Voce pode alterar a Client Seed a qualquer momento — isso influencia o resultado.",
-      "3. O resultado e calculado com HMAC-SHA256(serverSeed, clientSeed:nonce) — impossivel de manipular.",
-      "4. Apos o jogo, a Server Seed e revelada. Voce pode verificar: SHA256(seedRevelada) == hashAnterior.",
+      "1. ANTES de jogar: o servidor gera uma Server Seed secreta e te envia apenas o HASH dela. Salve este hash — é sua prova.",
+      "2. DURANTE o jogo: cada aposta usa HMAC-SHA256(serverSeed, clientSeed:nonce). Você não pode prever, o cassino não pode alterar.",
+      "3. PARA VERIFICAR: clique 'Rotacionar Seed'. O servidor revela a seed secreta. Confirme: SHA256(seedRevelada) == hash salvo.",
+      "4. O Histórico guarda todos os pares revelados. Use-os para verificar qualquer rodada anterior a qualquer momento.",
     ],
     in: [
-      "1. Before playing, the server generates a secret Server Seed and sends only the HASH (SHA-256).",
-      "2. You can change the Client Seed at any time — it influences the outcome.",
-      "3. The result is calculated with HMAC-SHA256(serverSeed, clientSeed:nonce) — impossible to manipulate.",
-      "4. After the game, the Server Seed is revealed. You can verify: SHA256(revealedSeed) == previousHash.",
+      "1. BEFORE playing: the server generates a secret Server Seed and sends only its HASH. Save this hash — it's your proof.",
+      "2. DURING the game: each bet uses HMAC-SHA256(serverSeed, clientSeed:nonce). You can't predict it, the casino can't change it.",
+      "3. TO VERIFY: click 'Rotate Seed'. The server reveals the secret seed. Confirm: SHA256(revealedSeed) == saved hash.",
+      "4. The History stores all revealed pairs. Use them to verify any previous round at any time.",
     ],
+  },
+  rotateNote: {
+    br: "⚠️ Ao rotacionar: a seed ATUAL é revelada e aparece no Histórico. Uma nova seed secreta é gerada. Só rotacione quando quiser verificar rodadas passadas.",
+    in: "⚠️ When rotating: the CURRENT seed is revealed and appears in History. A new secret seed is generated. Only rotate when you want to verify past rounds.",
+  },
+  verifyGuide: {
+    br: "Como verificar: Histórico → copie o Hash antigo → cole acima em 'Server Seed Hash' → cole a Seed Revelada → clique VERIFICAR.",
+    in: "How to verify: History → copy old Hash → paste above in 'Server Seed Hash' → paste Revealed Seed → click VERIFY.",
+  },
+  seedHint: {
+    br: "Mínimo 4 caracteres, máximo 64. Use algo que o cassino não possa prever.",
+    in: "Minimum 4 characters, maximum 64. Use something the casino can't predict.",
+  },
+  seedChanged: {
+    br: "Seed alterada — nonce resetado para 0",
+    in: "Seed changed — nonce reset to 0",
+  },
+  verifyDetailTitle: {
+    br: "DETALHES DA VERIFICAÇÃO",
+    in: "VERIFICATION DETAILS",
+  },
+  committedLabel: {
+    br: "Hash comprometido (antes):",
+    in: "Committed hash (before):",
+  },
+  recalcLabel: {
+    br: "Hash recalculado (agora):",
+    in: "Recalculated hash (now):",
+  },
+  hashMatch: {
+    br: "Os hashes são idênticos — o servidor não alterou a seed após sua aposta.",
+    in: "Hashes are identical — the server did not change the seed after your bet.",
+  },
+  hashMismatch: {
+    br: "Os hashes NÃO coincidem — a seed pode ter sido alterada.",
+    in: "Hashes do NOT match — the seed may have been tampered with.",
+  },
+  unverifiedBadge: {
+    br: "spins sem verificar",
+    in: "unverified spins",
   },
 };
 
@@ -121,6 +167,9 @@ export default function ProvablyFairModal({
   escPush,
   escPop,
   customExplanation,
+  clientSeedChanged = false,
+  unverifiedCount,
+  verifyDetails,
 }: ProvablyFairModalProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showSeedHistory, setShowSeedHistory] = useState(false);
@@ -174,23 +223,72 @@ export default function ProvablyFairModal({
             type="text"
             value={pfData.clientSeed}
             onChange={(e) => onClientSeedChange(e.target.value)}
+            maxLength={64}
             style={{
               ...terminalStyle,
               width: "100%",
               color: GOLD,
-              border: "1px solid rgba(212,168,67,0.2)",
+              border: clientSeedChanged
+                ? "1px solid rgba(0,230,118,0.6)"
+                : pfData.clientSeed.length < 4
+                  ? "1px solid rgba(255,107,107,0.3)"
+                  : "1px solid rgba(212,168,67,0.2)",
               outline: "none",
               boxSizing: "border-box",
-              transition: "border-color 0.2s",
+              transition: "border-color 0.3s",
             }}
             onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(212,168,67,0.5)"; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(212,168,67,0.2)"; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = pfData.clientSeed.length < 4 ? "rgba(255,107,107,0.3)" : "rgba(212,168,67,0.2)"; }}
           />
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "4px",
+            minHeight: "16px",
+          }}>
+            <span style={{
+              fontSize: "clamp(8px, 0.75vw, 10px)",
+              fontFamily: "'Inter', sans-serif",
+              color: pfData.clientSeed.length < 4 ? "rgba(255,107,107,0.6)" : "rgba(255,255,255,0.2)",
+              transition: "color 0.2s",
+            }}>
+              {t("seedHint")} ({pfData.clientSeed.length}/64)
+            </span>
+            <AnimatePresence>
+              {clientSeedChanged && (
+                <motion.span
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  style={{
+                    fontSize: "clamp(8px, 0.75vw, 10px)",
+                    fontFamily: "'Inter', sans-serif",
+                    color: GREEN,
+                  }}
+                >
+                  {t("seedChanged")}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
         </FieldBlock>
 
         {/* === NONCE === */}
         <FieldBlock label={t("nonce") as string}>
-          <div style={terminalStyle}>{pfData.nonce}</div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <div style={terminalStyle}>{pfData.nonce}</div>
+            {typeof unverifiedCount === "number" && unverifiedCount > 0 && (
+              <span style={{
+                fontSize: "clamp(8px, 0.75vw, 10px)",
+                fontFamily: "'Inter', sans-serif",
+                color: unverifiedCount >= 50 ? "rgba(255,107,107,0.7)" : "rgba(212,168,67,0.5)",
+                whiteSpace: "nowrap",
+              }}>
+                {unverifiedCount} {(TEXTS as any).unverifiedBadge[lang]}
+              </span>
+            )}
+          </div>
         </FieldBlock>
 
         {/* === SERVER SEED REVELADA (pos-jogo) === */}
@@ -272,8 +370,93 @@ export default function ProvablyFairModal({
           )}
         </AnimatePresence>
 
+        {/* === F3: DETALHES DA VERIFICACAO (hash side-by-side) === */}
+        <AnimatePresence>
+          {verifyDetails && pfData.isValid !== null && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: "hidden" }}
+            >
+              <div style={{
+                padding: "clamp(8px, 1vw, 12px)",
+                background: "rgba(0,0,0,0.35)",
+                borderRadius: "8px",
+                border: `1px solid ${verifyDetails.match ? "rgba(0,230,118,0.12)" : "rgba(255,68,68,0.12)"}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}>
+                <div style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: "clamp(9px, 0.9vw, 11px)",
+                  color: "rgba(212,168,67,0.5)",
+                  letterSpacing: "1px",
+                }}>
+                  {t("verifyDetailTitle")}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div>
+                    <span style={{
+                      fontSize: "clamp(8px, 0.75vw, 10px)",
+                      fontFamily: "'Inter', sans-serif",
+                      color: "rgba(255,255,255,0.35)",
+                      display: "block",
+                      marginBottom: "3px",
+                    }}>
+                      {t("committedLabel")}
+                    </span>
+                    <div style={{
+                      ...terminalStyle,
+                      fontSize: "clamp(8px, 0.7vw, 9px)",
+                      color: verifyDetails.match ? GREEN : RED,
+                      border: `1px solid ${verifyDetails.match ? "rgba(0,230,118,0.1)" : "rgba(255,68,68,0.1)"}`,
+                    }}>
+                      {verifyDetails.committedHash}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span style={{
+                      fontSize: "clamp(8px, 0.75vw, 10px)",
+                      fontFamily: "'Inter', sans-serif",
+                      color: "rgba(255,255,255,0.35)",
+                      display: "block",
+                      marginBottom: "3px",
+                    }}>
+                      {t("recalcLabel")}
+                    </span>
+                    <div style={{
+                      ...terminalStyle,
+                      fontSize: "clamp(8px, 0.7vw, 9px)",
+                      color: verifyDetails.match ? GREEN : RED,
+                      border: `1px solid ${verifyDetails.match ? "rgba(0,230,118,0.1)" : "rgba(255,68,68,0.1)"}`,
+                    }}>
+                      {verifyDetails.recalculatedHash}
+                    </div>
+                  </div>
+                </div>
+
+                <p style={{
+                  fontSize: "clamp(9px, 0.85vw, 11px)",
+                  fontFamily: "'Inter', sans-serif",
+                  color: verifyDetails.match ? "rgba(0,230,118,0.6)" : "rgba(255,107,107,0.7)",
+                  lineHeight: 1.4,
+                  margin: 0,
+                  textAlign: "center",
+                }}>
+                  {verifyDetails.match ? t("hashMatch") : t("hashMismatch")}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* === ROTACIONAR SEED === */}
         {onRotateSeed && (
+          <>
           <motion.button
             onClick={onRotateSeed}
             disabled={rotating}
@@ -297,6 +480,20 @@ export default function ProvablyFairModal({
           >
             {rotating ? t("rotating") : t("rotate")}
           </motion.button>
+          <p style={{
+            fontSize: "clamp(9px, 0.85vw, 11px)",
+            color: "rgba(255,200,100,0.55)",
+            fontFamily: "'Inter', sans-serif",
+            lineHeight: 1.5,
+            margin: 0,
+            padding: "6px 10px",
+            background: "rgba(212,168,67,0.04)",
+            border: "1px solid rgba(212,168,67,0.08)",
+            borderRadius: 6,
+          }}>
+            {(TEXTS as any).rotateNote[lang]}
+          </p>
+          </>
         )}
 
         {/* === HISTORICO DE SEEDS (toggle) === */}
