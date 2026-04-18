@@ -1,0 +1,65 @@
+# MAPA DE CONVERSAS — POKER (#6)
+# Blackout Casino GTARP — 01/04/2026
+
+## 6 CONVERSAS (3 V0 + 3 Claude)
+01-V0-ESTUDO .............. Estudo + regras + paths + confirmacao
+02-V0-TELAS-1-5 ........... ModeSelect, Caribbean (Bet/Play/Result), UTH Betting
+03-V0-TELAS-6-11 .......... UTH Community/Showdown, Win Overlay, Paytable, History+PF, Special
+04-CLAUDE-POLISH .......... Aplicar Doc 4 + Doc 7, corrigir visual
+05-CLAUDE-LOGICA-BACKEND .. Engine poker + SQL + Handler + Lua
+06-CLAUDE-INTEGRACAO ...... Integrar no painel + QA
+
+## ASSETS — TODOS EXISTEM (zero faltando)
+Game: public/assets/games/poker/ — card-back.png, chip.png, suit-hearts/diamonds/clubs/spades.png
+Cards/Logos: 6.POKER-IMAGE, LOGO-BR, LOGO-IN, Dourada, Pedestal
+Icons shared: provably-fair, history, paytable, rules, mode, jackpot, sound-on/off, copy
+UI: bg-casino.png
+Sons: ZERO mp3 — Web Audio procedural
+
+## CHECKLIST — TODOS OS 41 DOCUMENTOS
+
+| # | Arquivo | Linhas | Usado em |
+|---|---------|:------:|----------|
+| 1 | 0.PESQUISA-REGRA0-POKER-PARTE-1.md | 293 | 05-LOGICA |
+| 2 | 0.PESQUISA-REGRA0-POKER-PARTE-2.md | 505 | 05-LOGICA |
+| 3 | 0.PESQUISA-REGRA0-POKER-PARTE-3-ADENDO.md | 413 | 05-LOGICA |
+| 4 | 0.PESQUISA-REGRA0-POKER-PARTE-4-ADENDO.md | 38 | 05-LOGICA |
+| 5 | 1.MEGA-ESTUDO-POKER-PARTE-1.md | 239 | 05-LOGICA |
+| 6 | 1.MEGA-ESTUDO-POKER-PARTE-2.md | 444 | 05-LOGICA |
+| 7 | 1.MEGA-ESTUDO-POKER-PARTE-3-ADENDO-1.md | 350 | 05-LOGICA |
+| 8 | 1.MEGA-ESTUDO-POKER-PARTE-3-ADENDO-2.md | 511 | 05-LOGICA |
+| 9 | 2.GUIA-DO-JOGO-POKER.md | 196 | 01-V0-ESTUDO |
+| 10 | 2.GUIA-DO-JOGO-POKER-PARTE-2-ADENDO.md | 88 | 01-V0-ESTUDO |
+| 11 | 3.PROMPT-AI-POKER-PARTE-1.md | 640 | 05-LOGICA |
+| 12 | 3.PROMPT-AI-POKER-PARTE-2.md | 657 | 05-LOGICA |
+| 13 | 3.PROMPT-AI-POKER-PARTE-3.md | 470 | 05-LOGICA |
+| 14 | 3.PROMPT-AI-POKER-PARTE-4.md | 762 | 05-LOGICA |
+| 15 | 3.PROMPT-AI-POKER-PARTE-5-ADENDO.md | 114 | 05-LOGICA |
+| 16 | 3.PROMPT-AI-POKER-PARTE-6-ADENDO.md | 70 | 05-LOGICA |
+| 17 | 4.ADENDO-DS-POKER-PARTE-1.md | 715 | 04-POLISH |
+| 18 | 4.ADENDO-DS-POKER-PARTE-2.md | 819 | 04-POLISH |
+| 19 | 4.ADENDO-DS-POKER-PARTE-3.md | 631 | 04-POLISH |
+| 20 | 4.ADENDO-DS-POKER-PARTE-4.md | 360 | 04-POLISH |
+| 21 | 4.ADENDO-DS-POKER-PARTE-5-ADENDO.md | 76 | 04-POLISH |
+| 22 | 4.ADENDO-DS-POKER-PARTE-6-ADENDO.md | 76 | 04-POLISH |
+| 23 | 5.ROTEIRO-POKER-PARTE-1.md | 524 | 05-LOGICA |
+| 24 | 5.ROTEIRO-POKER-PARTE-2.md | 770 | 05-LOGICA |
+| 25 | 5.ROTEIRO-POKER-PARTE-3.md | 680 | 05-LOGICA |
+| 26 | 5.ROTEIRO-POKER-PARTE-4.md | 624 | 05-LOGICA |
+| 27 | 5.ROTEIRO-POKER-PARTE-5.md | 518 | 05-LOGICA |
+| 28 | 5.ROTEIRO-POKER-PARTE-6-ADENDO.md | 125 | 05-LOGICA |
+| 29 | 5.ROTEIRO-POKER-PARTE-7-ADENDO.md | 210 | 05-LOGICA |
+| 30 | 6.PROMPT-V0-POKER-PARTE-1.md | 386 | 02-V0-TELAS-1-5 |
+| 31 | 6.PROMPT-V0-POKER-PARTE-2.md | 312 | 03-V0-TELAS-6-11 |
+| 32 | 6.PROMPT-V0-POKER-PARTE-3-ADENDO.md | 98 | 02+03-V0 (mock+tooltips) |
+| 33 | 7.CSS-COMPONENTES-POKER-PARTE-1.md | 277 | 02-V0 + 04-POLISH |
+| 34 | 7.CSS-COMPONENTES-POKER-PARTE-2.md | 298 | 03-V0 + 04-POLISH |
+| 35 | 7.CSS-COMPONENTES-POKER-PARTE-3-ADENDO.md | 146 | 04-POLISH |
+| 36 | 7.CSS-COMPONENTES-POKER-PARTE-4-ADENDO.md | 69 | 04-POLISH |
+| 37 | 8.BIBLIOTECA-IMAGENS-POKER-PARTE-1.md | 455 | 01-V0-ESTUDO |
+| 38 | 8.BIBLIOTECA-IMAGENS-POKER-PARTE-2.md | 448 | 01-V0-ESTUDO |
+| 39 | 8.BIBLIOTECA-IMAGENS-POKER-PARTE-3.md | 440 | 06-INTEGRACAO |
+| 40 | 9.GUIA-INTEGRACAO-V0-POKER.md | 195 | 04-POLISH + 06-INTEG |
+| 41 | 10.RELATORIO-CORRECAO-POKER.md | 29 | 06-INTEGRACAO |
+
+**41 documentos. 15.071 linhas. TODOS mapeados. ZERO de fora.**

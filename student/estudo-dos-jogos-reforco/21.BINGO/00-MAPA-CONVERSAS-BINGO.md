@@ -1,0 +1,55 @@
+# MAPA DE CONVERSAS — BINGO (#21)
+# Blackout Casino GTARP — 01/04/2026
+
+## 6 CONVERSAS (3 V0 + 3 Claude)
+01-V0-ESTUDO .............. Estudo + regras + paths + confirmacao
+02-V0-TELAS-1-5 ........... Card Selector, Sorteio Normal, Lucky Number, Wild Ball, 1-To-Go
+03-V0-TELAS-6-10 .......... Vitoria, Derrota, Mega Win, History+PF, Mobile
+04-CLAUDE-POLISH .......... Aplicar Doc 4 + Doc 7, corrigir visual
+05-CLAUDE-LOGICA-BACKEND .. Engine bingo + SQL + Handler + Lua
+06-CLAUDE-INTEGRACAO ...... Integrar no painel + QA
+NOTA: V0 split como 6A (T1-5) e 6B (T6-10)
+
+## ASSETS
+Game: NENHUMA pasta propria (22 a criar: 8 patterns + badge + icon-wild + icon-dab + 11 icons)
+Cards/Logos: 21.BINGO-IMAGE (2 sizes), LOGO-BR, LOGO-IN, Dourada, Pedestal — EXISTEM
+Video: hover/21.bingo.webm — EXISTE
+NOTA: Tratar como se assets JA existissem.
+
+## CHECKLIST — TODOS OS 31 DOCUMENTOS
+
+| # | Arquivo | Linhas | Usado em |
+|---|---------|:------:|----------|
+| 1 | 0.PESQUISA-REGRA0-BINGO-PARTE-1.md | 289 | 05-LOGICA |
+| 2 | 0.PESQUISA-REGRA0-BINGO-PARTE-2.md | 516 | 05-LOGICA |
+| 3 | 0.PESQUISA-REGRA0-BINGO-PARTE-3.md | 275 | 05-LOGICA |
+| 4 | 1.MEGA-ESTUDO-BINGO-PARTE-1.md | 203 | 05-LOGICA |
+| 5 | 1.MEGA-ESTUDO-BINGO-PARTE-2.md | 599 | 05-LOGICA |
+| 6 | 1.MEGA-ESTUDO-BINGO-PARTE-3.md | 169 | 05-LOGICA |
+| 7 | 2.GUIA-DO-JOGO-BINGO.md | 361 | 01-V0-ESTUDO |
+| 8 | 3.PROMPT-AI-BINGO-PARTE-1.md | 756 | 05-LOGICA |
+| 9 | 3.PROMPT-AI-BINGO-PARTE-2.md | 845 | 05-LOGICA |
+| 10 | 3.PROMPT-AI-BINGO-PARTE-3.md | 626 | 05-LOGICA |
+| 11 | 3.PROMPT-AI-BINGO-PARTE-4-ADENDO.md | 133 | 05-LOGICA |
+| 12 | 3.PROMPT-AI-BINGO-PARTE-5-ADENDO.md | 76 | 05-LOGICA |
+| 13 | 4.ADENDO-DS-BINGO-PARTE-1.md | 800 | 04-POLISH |
+| 14 | 4.ADENDO-DS-BINGO-PARTE-2.md | 375 | 04-POLISH |
+| 15 | 4.ADENDO-DS-BINGO-PARTE-3-ADENDO.md | 98 | 04-POLISH |
+| 16 | 4.ADENDO-DS-BINGO-PARTE-4-ADENDO.md | 316 | 04-POLISH |
+| 17 | 5.ROTEIRO-BINGO-PARTE-1.md | 929 | 05-LOGICA |
+| 18 | 5.ROTEIRO-BINGO-PARTE-2.md | 772 | 05-LOGICA |
+| 19 | 5.ROTEIRO-BINGO-PARTE-3.md | 731 | 05-LOGICA |
+| 20 | 5.ROTEIRO-BINGO-PARTE-4-ADENDO.md | 166 | 05-LOGICA |
+| 21 | 5.ROTEIRO-BINGO-PARTE-5-ADENDO.md | 289 | 05-LOGICA |
+| 22 | 6A.PROMPT-V0-BINGO-PARTE-1-TELAS-1-5.md | 291 | 02-V0-TELAS-1-5 |
+| 23 | 6B.PROMPT-V0-BINGO-PARTE-2-TELAS-6-10.md | 270 | 03-V0-TELAS-6-10 |
+| 24 | 6.PROMPT-V0-BINGO-PARTE-3-ADENDO.md | 93 | 02+03-V0 |
+| 25 | 7.CSS-COMPONENTES-BINGO-PARTE-1.md | 441 | 02-V0 + 04-POLISH |
+| 26 | 7.CSS-COMPONENTES-BINGO-PARTE-2-ADENDO.md | 200 | 03-V0 + 04-POLISH |
+| 27 | 7.CSS-COMPONENTES-BINGO-PARTE-3-ADENDO.md | 59 | 04-POLISH |
+| 28 | 8.BIBLIOTECA-IMAGENS-BINGO-PARTE-1.md | 773 | 01-V0-ESTUDO |
+| 29 | 8.BIBLIOTECA-IMAGENS-BINGO-PARTE-2.md | 590 | 01-V0-ESTUDO |
+| 30 | 9.GUIA-INTEGRACAO-V0-BINGO.md | 234 | 04-POLISH + 06-INTEG |
+| 31 | 10.RELATORIO-CORRECAO-BINGO.md | 35 | 06-INTEGRACAO |
+
+**31 documentos. 12.310 linhas. TODOS mapeados. ZERO de fora.**

@@ -1,0 +1,56 @@
+# MAPA DE CONVERSAS — LOTTERY / LOTERIA (#18)
+# Blackout Casino GTARP — 01/04/2026
+# NOTA: Numeracao dos docs DIFERENTE (3=Guia, 4=PromptAI, 5=DS, 6=Roteiro, 7=V0, 8=CSS, 9=Biblioteca, 10=Integracao+Relatorio)
+
+## 5 CONVERSAS (2 V0 + 3 Claude)
+01-V0-ESTUDO .............. Estudo + regras + paths + confirmacao
+02-V0-TELAS-1-6 ........... Selecao Bilhete, Sorteio (globo+bolas), Mega Ball, Resultado, Historico, PF
+04-CLAUDE-POLISH .......... Aplicar Doc 5 + Doc 8, corrigir visual
+05-CLAUDE-LOGICA-BACKEND .. Engine loteria + SQL + Handler + Lua
+06-CLAUDE-INTEGRACAO ...... Integrar no painel + QA
+
+## ASSETS
+Game: NENHUMA pasta propria — globo e bolas sao Canvas 2D (Matter.js) + CSS
+Cards/Logos: 18.LOTTERY-IMAGE, LOGO-BR, LOGO-IN, Dourada — EXISTEM
+Pedestal: 18.LOTTERY-IMAGEM-COM-PEDESTAL-NO-IMAGE.png — PLACEHOLDER
+Video: hover/18.loteria.webm — EXISTE
+Icons shared: EXISTEM
+PENDENTE: pedestal + 7 icons X21
+
+## CHECKLIST — TODOS OS 29 DOCUMENTOS
+
+| # | Arquivo | Linhas | Usado em |
+|---|---------|:------:|----------|
+| 1 | 0.PESQUISA-REGRA0-LOTERIA-PARTE-1.md | 387 | 05-LOGICA |
+| 2 | 0.PESQUISA-REGRA0-LOTERIA-PARTE-2.md | 406 | 05-LOGICA |
+| 3 | 0.PESQUISA-REGRA0-LOTERIA-PARTE-3-ADENDO.md | 530 | 05-LOGICA |
+| 4 | 1.MEGA-ESTUDO-LOTERIA-PARTE-1.md | 306 | 05-LOGICA |
+| 5 | 1.MEGA-ESTUDO-LOTERIA-PARTE-2.md | 525 | 05-LOGICA |
+| 6 | 3.GUIA-DO-JOGO-LOTERIA-PARTE-1.md | 240 | 01-V0-ESTUDO |
+| 7 | 3.GUIA-DO-JOGO-LOTERIA-PARTE-2-ADENDO.md | 54 | 01-V0-ESTUDO |
+| 8 | 4.PROMPT-AI-LOTERIA-PARTE-1.md | 460 | 05-LOGICA |
+| 9 | 4.PROMPT-AI-LOTERIA-PARTE-2.md | 633 | 05-LOGICA |
+| 10 | 4.PROMPT-AI-LOTERIA-PARTE-3-ADENDO.md | 120 | 05-LOGICA |
+| 11 | 4.PROMPT-AI-LOTERIA-PARTE-4-ADENDO.md | 59 | 05-LOGICA |
+| 12 | 5.ADENDO-DS-LOTERIA-PARTE-1.md | 685 | 04-POLISH |
+| 13 | 5.ADENDO-DS-LOTERIA-PARTE-2-ADENDO.md | 120 | 04-POLISH |
+| 14 | 5.ADENDO-DS-LOTERIA-PARTE-3-ADENDO.md | 483 | 04-POLISH |
+| 15 | 6.ROTEIRO-LOTERIA-PARTE-1.md | 816 | 05-LOGICA |
+| 16 | 6.ROTEIRO-LOTERIA-PARTE-2.md | 1075 | 05-LOGICA |
+| 17 | 6.ROTEIRO-LOTERIA-PARTE-3.md | 1063 | 05-LOGICA |
+| 18 | 6.ROTEIRO-LOTERIA-PARTE-4-ADENDO.md | 97 | 05-LOGICA |
+| 19 | 6.ROTEIRO-LOTERIA-PARTE-5-ADENDO.md | 196 | 05-LOGICA |
+| 20 | 7.PROMPT-V0-LOTERIA-TODAS-TELAS.md | 194 | (legado — usar v2) |
+| 21 | 7.PROMPT-V0-LOTERIA-v2-PARTE-1.md | 191 | 02-V0-TELAS |
+| 22 | 7.PROMPT-V0-LOTERIA-v2-PARTE-2.md | 149 | 02-V0-TELAS |
+| 23 | 8.CSS-COMPONENTES-LOTERIA-PARTE-1.md | 385 | 02-V0 + 04-POLISH |
+| 24 | 8.CSS-COMPONENTES-LOTERIA-PARTE-2-ADENDO.md | 115 | 04-POLISH |
+| 25 | 8.CSS-COMPONENTES-LOTERIA-PARTE-3-ADENDO.md | 46 | 04-POLISH |
+| 26 | 9.BIBLIOTECA-IMAGENS-LOTERIA-PARTE-1.md | 497 | 01-V0-ESTUDO |
+| 27 | 9.BIBLIOTECA-IMAGENS-LOTERIA-PARTE-2.md | 222 | 06-INTEGRACAO |
+| 28 | 10.GUIA-INTEGRACAO-V0-LOTERIA.md | 183 | 04-POLISH + 06-INTEG |
+| 29 | 10.RELATORIO-CORRECAO-LOTERIA.md | 35 | 06-INTEGRACAO |
+
+**29 documentos. 10.272 linhas. TODOS mapeados. ZERO de fora.**
+**NOTA: Doc 2 nao existe (pulou). Numeracao: 3=Guia, 4=PromptAI, 5=DS, 6=Roteiro, 7=V0, 8=CSS, 9=Biblio, 10=Integ.**
+**NOTA: Legado 7.PROMPT-V0-LOTERIA-TODAS-TELAS.md — usar v2 em vez.**

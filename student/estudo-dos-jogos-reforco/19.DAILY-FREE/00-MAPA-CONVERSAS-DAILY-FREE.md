@@ -1,0 +1,53 @@
+# MAPA DE CONVERSAS — DAILY-FREE / RODA DA FORTUNA (#19)
+# Blackout Casino GTARP — 01/04/2026
+
+## 6 CONVERSAS (3 V0 + 3 Claude)
+01-V0-ESTUDO .............. Estudo + regras + paths + confirmacao
+02-V0-TELAS-1-4 ........... Idle (roda parada), Spinning (girando), Claimed (ja girou), Resultado
+03-V0-TELAS-5-7 ........... Milestone (7/14/30d), Provably Fair, Historico
+04-CLAUDE-POLISH .......... Aplicar Doc 4 + Doc 7, corrigir visual
+05-CLAUDE-LOGICA-BACKEND .. Engine daily-free + SQL + Handler + Lua
+06-CLAUDE-INTEGRACAO ...... Integrar no painel + QA
+
+## ASSETS
+Game: NENHUMA pasta propria (20 a criar: 5 premios + pointer + 11 icons + 3 badges)
+Cards/Logos: 19.DAILYFREE-IMAGE, LOGO-BR, LOGO-IN, Dourada, Pedestal — EXISTEM
+Video: hover/19.dailyfree.webm — EXISTE
+Icons shared: EXISTEM (podem ser reutilizados pra vários)
+NOTA: Tratar como se assets JA existissem.
+
+## CHECKLIST — TODOS OS 29 DOCUMENTOS
+
+| # | Arquivo | Linhas | Usado em |
+|---|---------|:------:|----------|
+| 1 | 0.PESQUISA-REGRA0-DAILY-FREE-PARTE-1.md | 243 | 05-LOGICA |
+| 2 | 0.PESQUISA-REGRA0-DAILY-FREE-PARTE-2.md | 417 | 05-LOGICA |
+| 3 | 0.PESQUISA-REGRA0-DAILY-FREE-PARTE-3.md | 214 | 05-LOGICA |
+| 4 | 1.MEGA-ESTUDO-DAILY-FREE-PARTE-1.md | 211 | 05-LOGICA |
+| 5 | 1.MEGA-ESTUDO-DAILY-FREE-PARTE-2.md | 469 | 05-LOGICA |
+| 6 | 1.MEGA-ESTUDO-DAILY-FREE-PARTE-3-ADENDO.md | 83 | 05-LOGICA |
+| 7 | 2.GUIA-DO-JOGO-DAILY-FREE-PARTE-1.md | 193 | 01-V0-ESTUDO |
+| 8 | 2.GUIA-DO-JOGO-DAILY-FREE-PARTE-2-ADENDO.md | 96 | 01-V0-ESTUDO |
+| 9 | 3.PROMPT-AI-DAILY-FREE-PARTE-1.md | 571 | 05-LOGICA |
+| 10 | 3.PROMPT-AI-DAILY-FREE-PARTE-2.md | 524 | 05-LOGICA |
+| 11 | 3.PROMPT-AI-DAILY-FREE-PARTE-3.md | 521 | 05-LOGICA |
+| 12 | 4.ADENDO-DS-DAILY-FREE-PARTE-1.md | 555 | 04-POLISH |
+| 13 | 4.ADENDO-DS-DAILY-FREE-PARTE-2.md | 530 | 04-POLISH |
+| 14 | 4.ADENDO-DS-DAILY-FREE-PARTE-3.md | 353 | 04-POLISH |
+| 15 | 4.ADENDO-DS-DAILY-FREE-PARTE-4-ADENDO.md | 76 | 04-POLISH |
+| 16 | 5.ROTEIRO-DAILY-FREE-PARTE-1.md | 241 | 05-LOGICA |
+| 17 | 5.ROTEIRO-DAILY-FREE-PARTE-2.md | 518 | 05-LOGICA |
+| 18 | 5.ROTEIRO-DAILY-FREE-PARTE-3.md | 560 | 05-LOGICA |
+| 19 | 5.ROTEIRO-DAILY-FREE-PARTE-4.md | 622 | 05-LOGICA |
+| 20 | 5.ROTEIRO-DAILY-FREE-PARTE-5.md | 844 | 05-LOGICA |
+| 21 | 6.PROMPT-V0-DAILY-FREE-PARTE-1.md | 315 | 02-V0-TELAS-1-4 |
+| 22 | 6.PROMPT-V0-DAILY-FREE-PARTE-2.md | 192 | 03-V0-TELAS-5-7 |
+| 23 | 7.CSS-COMPONENTES-DAILY-FREE-PARTE-1.md | 357 | 02-V0 + 04-POLISH |
+| 24 | 7.CSS-COMPONENTES-DAILY-FREE-PARTE-2.md | 403 | 03-V0 + 04-POLISH |
+| 25 | 8.BIBLIOTECA-IMAGENS-DAILY-FREE-PARTE-1.md | 353 | 01-V0-ESTUDO |
+| 26 | 8.BIBLIOTECA-IMAGENS-DAILY-FREE-PARTE-2.md | 173 | 01-V0-ESTUDO |
+| 27 | 8.BIBLIOTECA-IMAGENS-DAILY-FREE-PARTE-3.md | 485 | 06-INTEGRACAO |
+| 28 | 9.GUIA-INTEGRACAO-V0-DAILY-FREE.md | 307 | 04-POLISH + 06-INTEG |
+| 29 | 10.RELATORIO-CORRECAO-DAILY-FREE.md | 35 | 06-INTEGRACAO |
+
+**29 documentos. 10.461 linhas. TODOS mapeados. ZERO de fora.**

@@ -1,0 +1,68 @@
+# MAPA DE CONVERSAS — ANIMAL GAME / JOGO DO BICHO (#9)
+# Blackout Casino GTARP — 01/04/2026
+
+## 6 CONVERSAS (3 V0 + 3 Claude)
+01-V0-ESTUDO .............. Estudo + regras + paths + confirmacao
+02-V0-TELAS-1-3 ........... Apostas (grid 25 animais), Sorteio (5 capsulas), Vitoria
+03-V0-TELAS-4-6 ........... Derrota, Historico, Provably Fair
+04-CLAUDE-POLISH .......... Aplicar Doc 4 + Doc 7, corrigir visual
+05-CLAUDE-LOGICA-BACKEND .. Engine bicho + SQL + Handler + Lua
+06-CLAUDE-INTEGRACAO ...... Integrar no painel + QA
+
+## ASSETS — TODOS EXISTEM (zero faltando)
+Game: public/assets/games/bicho/ — 25 PNGs (1.png a 25.png, um por animal/grupo)
+Cards/Logos: 9.ANIMALGAME-IMAGE, LOGO-BR, LOGO-IN, Dourada, Pedestal — EXISTEM
+Video: hero/9.bichos.webm — EXISTE
+Icons shared: gcoin, provably-fair, history, sound-on/off, copy, auto, random — EXISTEM
+UI: bg-casino.png — EXISTE
+Sons: ZERO mp3 — Web Audio procedural
+
+## OS 25 GRUPOS (1.png a 25.png)
+1-Avestruz, 2-Aguia, 3-Burro, 4-Borboleta, 5-Cachorro, 6-Cabra, 7-Carneiro,
+8-Camelo, 9-Cobra, 10-Coelho, 11-Cavalo, 12-Elefante, 13-Galo, 14-Gato,
+15-Jacare, 16-Leao, 17-Macaco, 18-Porco, 19-Pavao, 20-Peru, 21-Touro,
+22-Tigre, 23-Urso, 24-Veado, 25-Vaca
+
+## CHECKLIST — TODOS OS 36 DOCUMENTOS
+
+| # | Arquivo | Linhas | Usado em |
+|---|---------|:------:|----------|
+| 1 | 0.PESQUISA-REGRA0-ANIMAL-GAME-PARTE-1.md | 243 | 05-LOGICA |
+| 2 | 0.PESQUISA-REGRA0-ANIMAL-GAME-PARTE-2.md | 388 | 05-LOGICA |
+| 3 | 0.PESQUISA-REGRA0-ANIMAL-GAME-PARTE-3.md | 274 | 05-LOGICA |
+| 4 | 0.PESQUISA-REGRA0-ANIMAL-GAME-PARTE-4-ADENDO.md | 23 | 05-LOGICA |
+| 5 | 1.MEGA-ESTUDO-ANIMAL-GAME-PARTE-1.md | 237 | 05-LOGICA |
+| 6 | 1.MEGA-ESTUDO-ANIMAL-GAME-PARTE-2.md | 390 | 05-LOGICA |
+| 7 | 1.MEGA-ESTUDO-ANIMAL-GAME-PARTE-3.md | 151 | 05-LOGICA |
+| 8 | 2.GUIA-DO-JOGO-ANIMAL-GAME-PARTE-1.md | 236 | 01-V0-ESTUDO |
+| 9 | 2.GUIA-DO-JOGO-ANIMAL-GAME-PARTE-2-ADENDO.md | 25 | 01-V0-ESTUDO |
+| 10 | 3.PROMPT-AI-ANIMAL-GAME-PARTE-1.md | 672 | 05-LOGICA |
+| 11 | 3.PROMPT-AI-ANIMAL-GAME-PARTE-2.md | 632 | 05-LOGICA |
+| 12 | 3.PROMPT-AI-ANIMAL-GAME-PARTE-3.md | 572 | 05-LOGICA |
+| 13 | 3.PROMPT-AI-ANIMAL-GAME-PARTE-4-ADENDO.md | 175 | 05-LOGICA |
+| 14 | 3.PROMPT-AI-ANIMAL-GAME-PARTE-5-ADENDO.md | 73 | 05-LOGICA |
+| 15 | 4.ADENDO-DS-ANIMAL-GAME-PARTE-1.md | 639 | 04-POLISH |
+| 16 | 4.ADENDO-DS-ANIMAL-GAME-PARTE-2.md | 868 | 04-POLISH |
+| 17 | 4.ADENDO-DS-ANIMAL-GAME-PARTE-3.md | 374 | 04-POLISH |
+| 18 | 4.ADENDO-DS-ANIMAL-GAME-PARTE-4-ADENDO.md | 89 | 04-POLISH |
+| 19 | 4.ADENDO-DS-ANIMAL-GAME-PARTE-5-ADENDO.md | 46 | 04-POLISH |
+| 20 | 5.ROTEIRO-ANIMAL-GAME-PARTE-1.md | 428 | 05-LOGICA |
+| 21 | 5.ROTEIRO-ANIMAL-GAME-PARTE-2.md | 593 | 05-LOGICA |
+| 22 | 5.ROTEIRO-ANIMAL-GAME-PARTE-3.md | 390 | 05-LOGICA |
+| 23 | 5.ROTEIRO-ANIMAL-GAME-PARTE-4.md | 730 | 05-LOGICA |
+| 24 | 5.ROTEIRO-ANIMAL-GAME-PARTE-5.md | 545 | 05-LOGICA |
+| 25 | 5.ROTEIRO-ANIMAL-GAME-PARTE-6-ADENDO.md | 284 | 05-LOGICA |
+| 26 | 5.ROTEIRO-ANIMAL-GAME-PARTE-7-ADENDO.md | 194 | 05-LOGICA |
+| 27 | 6.PROMPT-V0-ANIMAL-GAME-PARTE-1.md | 661 | 02+03-V0 |
+| 28 | 6.PROMPT-V0-ANIMAL-GAME-PARTE-2-ADENDO.md | 35 | 02+03-V0 |
+| 29 | 7.CSS-COMPONENTES-ANIMAL-GAME-PARTE-1.md | 1050 | 02-V0 + 04-POLISH |
+| 30 | 7.CSS-COMPONENTES-ANIMAL-GAME-PARTE-2-ADENDO.md | 210 | 03-V0 + 04-POLISH |
+| 31 | 7.CSS-COMPONENTES-ANIMAL-GAME-PARTE-3-ADENDO.md | 61 | 04-POLISH |
+| 32 | 8.BIBLIOTECA-IMAGENS-ANIMAL-GAME-PARTE-1.md | 289 | 01-V0-ESTUDO |
+| 33 | 8.BIBLIOTECA-IMAGENS-ANIMAL-GAME-PARTE-2.md | 643 | 01-V0-ESTUDO |
+| 34 | 8.BIBLIOTECA-IMAGENS-ANIMAL-GAME-PARTE-3.md | 592 | 01-V0-ESTUDO |
+| 35 | 8.BIBLIOTECA-IMAGENS-ANIMAL-GAME-PARTE-4.md | 725 | 06-INTEGRACAO |
+| 36 | 9.GUIA-INTEGRACAO-V0-IMAGENS-ANIMAL-GAME.md | 300 | 04-POLISH + 06-INTEG |
+
+**36 documentos. 13.837 linhas. TODOS mapeados. ZERO de fora.**
+**NOTA: Sem Doc 10 (Relatorio) para Animal Game.**
